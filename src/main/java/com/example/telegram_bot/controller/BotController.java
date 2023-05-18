@@ -49,12 +49,36 @@ public class BotController extends TelegramLongPollingBot {
      */
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            //checkAuth(update.getMessage().getChat());
+        if (update.hasMessage() && update.getMessage().hasText() && !update.hasCallbackQuery()) {
+            long chatId = update.getMessage().getChatId();
+            String messageText = update.getMessage().getText();
+
+            // 创建一个 InlineKeyboardMarkup 对象，并设置键盘的按钮
+            InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
+            row1.add(new InlineKeyboardButton().setText("Option 1").setCallbackData("option1"));
+            row1.add(new InlineKeyboardButton().setText("Option 2").setCallbackData("option2"));
+            rows.add(row1);
+            keyboardMarkup.setKeyboard(rows);
+
+            // 创建一个 SendMessage 对象，并将 InlineKeyboardMarkup 对象作为参数传递给 setReplyMarkup() 方法
+            SendMessage message = SendMessage.builder()
+                    .chatId(chatId)
+                    .text("内嵌菜单")
+                    .replyMarkup(keyboardMarkup)
+                    .build();
+
+            // 发送消息
             try {
-                //keyBoardMenu(update.getMessage().getChatId());
+                execute(message);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        } else if (update.hasCallbackQuery()) {
+            try {
                 sendTextRecall(update);
-            } catch (Exception e) {
+            } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
         }
@@ -100,45 +124,45 @@ public class BotController extends TelegramLongPollingBot {
         executor.shutdown();
     }
 
-    private void keyBoardMenu(Long chatId) {
-        // 创建一个新的ReplyKeyboardMarkup
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-
-        // 创建一个新的行
-        List<KeyboardRow> keyboard = new ArrayList<>();
-
-        // 创建第一行按钮
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add("Button 1");
-        row1.add("Button 2");
-
-        // 创建第二行按钮
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add("Button 3");
-        row2.add("Button 4");
-
-        // 将两行按钮添加到键盘中
-        keyboard.add(row1);
-        keyboard.add(row2);
-
-        // 设置键盘
-        keyboardMarkup.setKeyboard(keyboard);
-
-        // 将键盘添加到消息中
-        SendMessage message = SendMessage.builder()
-                .chatId(chatId)
-                .text("This is an example message with a menu.")
-                .replyMarkup(keyboardMarkup)
-                .build();
-
-
-        // 发送消息
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
+//    private void keyBoardMenu(Long chatId) {
+//        // 创建一个新的ReplyKeyboardMarkup
+//        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+//
+//        // 创建一个新的行
+//        List<KeyboardRow> keyboard = new ArrayList<>();
+//
+//        // 创建第一行按钮
+//        KeyboardRow row1 = new KeyboardRow();
+//        row1.add("Button 1");
+//        row1.add("Button 2");
+//
+//        // 创建第二行按钮
+//        KeyboardRow row2 = new KeyboardRow();
+//        row2.add("Button 3");
+//        row2.add("Button 4");
+//
+//        // 将两行按钮添加到键盘中
+//        keyboard.add(row1);
+//        keyboard.add(row2);
+//
+//        // 设置键盘
+//        keyboardMarkup.setKeyboard(keyboard);
+//
+//        // 将键盘添加到消息中
+//        SendMessage message = SendMessage.builder()
+//                .chatId(chatId)
+//                .text("This is an example message with a menu.")
+//                .replyMarkup(keyboardMarkup)
+//                .build();
+//
+//
+//        // 发送消息
+//        try {
+//            execute(message);
+//        } catch (TelegramApiException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     public void onCallbackQueryReceived(CallbackQuery callbackQuery) {
         // 处理内联键盘回调
