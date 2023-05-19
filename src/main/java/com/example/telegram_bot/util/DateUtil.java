@@ -1670,10 +1670,5 @@ public class DateUtil {
         }
         return result;
     }
-
-	/*public static void main(String[] args) {
-		List<String> list = getBetweenWeeks("2022-03-01","2022-03-31");
-		System.out.println(list.toString());
-	}*/
 }
 

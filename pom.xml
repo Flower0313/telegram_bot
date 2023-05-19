@@ -89,7 +89,6 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.example.telegram_bot.TelegramBotApplication</mainClass>
-                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>
