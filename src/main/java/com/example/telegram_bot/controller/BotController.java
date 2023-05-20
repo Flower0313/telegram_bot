@@ -136,26 +136,20 @@ public class BotController extends TelegramLongPollingBot {
         String data = callbackQuery.getData();
         long chatId = callbackQuery.getMessage().getChatId();
 
+
+        //查询图片并判断图片数量
+
         //传多张图片
-        List<InputMedia> mediaList = new ArrayList<>();
-        //必须是公网链接
-        mediaList.add(InputMediaPhoto.builder().media("http://43.142.117.50:55551/image/1.jpg").caption("介绍").build());
-        mediaList.add(InputMediaPhoto.builder().media("http://43.142.117.50:55551/image/1.jpg").build());
-        mediaList.add(InputMediaPhoto.builder().media("http://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png").build());
-        SendMediaGroup mediaGroup = new SendMediaGroup();
-        mediaGroup.setChatId(chatId);
-        mediaGroup.setMedias(mediaList);
 
 
 
-        /*SendPhoto photo = SendPhoto.builder().chatId(chatId)
-                .photo(new InputFile(new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\mars.jpg")))
+        SendPhoto photo = SendPhoto.builder().chatId(chatId)
+                .photo(new InputFile(new File("/Users/xiaohua/Desktop/1.jpeg")))
                 .caption("上海老师-小结-包多少-闵行区")
-                .build();*/
-        // 发送消息
+                .build();
+        // 发送消
         try {
-            System.out.println("进来了");
-            execute(mediaGroup);
+            execute(photo);
         } catch (Exception e) {
             e.printStackTrace();
         }
