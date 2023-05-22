@@ -1,6 +1,9 @@
 package com.example.telegram_bot.service.impl;
 
+import com.example.telegram_bot.mapper.Bot;
+import com.example.telegram_bot.pojo.Phoenix;
 import com.example.telegram_bot.service.ImgService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
@@ -8,6 +11,7 @@ import org.springframework.util.FileCopyUtils;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.file.Files;
+import java.util.List;
 
 /**
  * @ClassName telegram_bot-ImgServiceImpl
@@ -17,6 +21,8 @@ import java.nio.file.Files;
  */
 @Service
 public class ImgServiceImpl implements ImgService {
+    @Autowired
+    private Bot botMapper;
 
     @Override
     public void getPic(HttpServletResponse resp, String pic) throws IOException {
@@ -26,5 +32,11 @@ public class ImgServiceImpl implements ImgService {
         // 将图像内容写入HTTP响应流
         resp.setContentType("image/png");
         resp.getOutputStream().write(imageBytes);
+    }
+
+    @Override
+    public void test() {
+        List<Phoenix> phoenixes = botMapper.listPhoenix();
+        System.out.println(phoenixes);
     }
 }

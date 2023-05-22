@@ -16,5 +16,10 @@ public class Constant {
     public static final String SZ = "sz";
     public static final String BOOK = "book";
     public static final String BALANCE = "balance";
+    public static final String SEPARATOR = "-";
+    public static final String LIST = "list";
+    public static final String PAGE = "page";
+    public static final String LAST = "last";
+    public static final String NEXT = "next";
 
 }

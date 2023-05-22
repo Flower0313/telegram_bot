@@ -1,5 +1,6 @@
 package com.example.telegram_bot.controller;
 
+import com.example.telegram_bot.service.BotService;
 import com.example.telegram_bot.service.ImgService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +21,13 @@ public class ImgController {
     @Autowired
     private ImgService imgService;
 
+    @Autowired
+    private BotService botService;
+
+
     @GetMapping("/image/{pic}")
     public void getImg(HttpServletResponse resp,@PathVariable("pic") String pic) throws IOException {
         imgService.getPic(resp, pic);
     }
+
 }

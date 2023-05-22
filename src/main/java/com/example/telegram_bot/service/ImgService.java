@@ -1,5 +1,7 @@
 package com.example.telegram_bot.service;
 
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
@@ -10,6 +12,8 @@ import java.io.IOException;
  * @Describe
  */
 
-public interface ImgService {
+public interface ImgService{
     void getPic(HttpServletResponse resp, String pic) throws IOException;
+
+    void test();
 }
