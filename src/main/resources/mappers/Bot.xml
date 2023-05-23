@@ -19,6 +19,13 @@
         <result column="real_content" property="realContent" jdbcType="VARCHAR"/>
     </resultMap>
 
+    <resultMap id="UserResultMap" type="com.example.telegram_bot.pojo.UserVO">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <id column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="balance" property="balance" jdbcType="DECIMAL"/>
+        <result column="type" property="type" jdbcType="VARCHAR"/>
+    </resultMap>
+
     <select id="listPhoenix" resultMap="BaseResultMap">
         SELECT id,
                channel_id,
@@ -38,7 +45,7 @@
                    (if_96 = 1, TRUE, FALSE)   AS if_96,
                min_price,
                remark
-        FROM `dwd_building_phoenix` order by id
+        FROM `dwd_building_phoenix`
     </select>
 
     <select id="getTargetPhoenix" resultMap="BaseResultMap">
@@ -63,4 +70,43 @@
         FROM `dwd_building_phoenix`
         where id = #{id}
     </select>
+    <insert id="addUser">
+        insert into user_info(user_id)
+        values (#{userId})
+    </insert>
+
+    <select id="selectUser" resultMap="UserResultMap">
+        select id,
+               user_id,
+               balance,
+               CASE
+                   type
+                   WHEN 0 THEN
+                       '凤斗者'
+                   WHEN 1 THEN
+                       '凤斗王'
+                   WHEN 2 THEN
+                       '凤号斗罗'
+                   END as type
+        from user_info
+        where user_id = #{userId}
+    </select>
+
+    <select id="realContent" resultType="java.lang.String">
+        SELECT real_content
+        FROM `dwd_building_phoenix`
+        where id = #{id}
+    </select>
+
+    <update id="updateBalance">
+        update user_info
+        set balance=#{balance}
+        where user_id = #{userId}
+    </update>
+
+    <update id="linkBuyAction">
+        update user_info
+        set balance=#{balance}
+        where user_id = #{userId}
+    </update>
 </mapper>
