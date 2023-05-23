@@ -15,7 +15,7 @@ public interface BotService {
     void test();
 
     /**
-     * 扣减余额 & 增加购买记录
+     * 扣减余额 & 增加购买记录 - 事务处理
      *
      * @param userId    用户id
      * @param phoenixId 凤id

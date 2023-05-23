@@ -363,10 +363,18 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     @Override
     @Transactional
     public void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract) {
+        // 开始事务
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus status = transactionManager.getTransaction(def);
         try {
             botMapper.updateBalance(userId, subtract);
             botMapper.linkBuyAction(userId, phoenixId);
+            // 提交事务
+            transactionManager.commit(status);
         } catch (Exception e) {
+            // 回滚事务
+            transactionManager.rollback(status);
             e.printStackTrace();
         }
     }
