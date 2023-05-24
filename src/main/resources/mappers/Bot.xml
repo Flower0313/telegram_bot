@@ -67,6 +67,8 @@
                    (if_96 = 1, TRUE, FALSE)   AS if_96,
                min_price,
                remark
+                ,
+               real_content
         FROM `dwd_building_phoenix`
         where id = #{id}
     </select>
@@ -105,8 +107,26 @@
     </update>
 
     <update id="linkBuyAction">
-        update user_info
-        set balance=#{balance}
-        where user_id = #{userId}
+        replace
+        into user_action(user_id,phoenix_id,visits,locked) values(
+        #{userId},
+        #{phoenixId},
+        IFNULL
+        (
+        visits,
+        0
+        )
+        +
+        1,
+        #{locked}
+        )
     </update>
+
+    <select id="userPhoenixAction" resultType="java.lang.Integer">
+        select locked
+        from user_action
+        where user_id = #{userId}
+          and phoenix_id = #{phoenixId}
+    </select>
+
 </mapper>

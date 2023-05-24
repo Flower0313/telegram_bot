@@ -24,10 +24,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -87,6 +84,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
 
     }
 
+
     /**
      * @return bot_api创建者id
      */
@@ -101,53 +99,81 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      */
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText() && !update.hasCallbackQuery()) {
-            try {
-                long chatId = update.getMessage().getChatId();
-                String messageText = update.getMessage().getText();
-                if (Constant.CJ.equals(messageText)) {
-                    InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-                    // 创建一个 InlineKeyboardMarkup 对象，并设置键盘的按钮
-                    keyboardMarkup.setKeyboard(getInnerMenu(Constant.PHOENIX_MENU, null, "", ""));
-                    // 创建一个 SendMessage 对象，并将 InlineKeyboardMarkup 对象作为参数传递给 setReplyMarkup() 方法
-                    SendMessage message = SendMessage.builder()
-                            .chatId(chatId)
-                            .text("请选择以下感兴趣地区(数据每天00:00开始更新最新数据):\n由于是个人运营，所以服务器费用也是自己出，象征性收点小钱;" +
-                                    "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了，而且数据量还很全。")
-                            .replyMarkup(keyboardMarkup)
-                            .build();
-                    executeAsync(message);
-                } else if (Constant.HELP.equals(messageText)) {
-                    InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-                    keyboardMarkup.setKeyboard(getInnerMenu(Constant.USER_MENU, null, "", ""));
-                    SendMessage message = SendMessage.builder()
-                            .chatId(chatId)
-                            .text("帮助列表:")
-                            .replyMarkup(keyboardMarkup)
-                            .build();
-                    executeAsync(message);
-                } else if (Constant.REGISTER.equals(messageText)) {
-                    Long userId = update.getMessage().getFrom().getId();
-                    if (Objects.isNull(botMapper.selectUser(userId))) {
-                        botMapper.addUser(update.getMessage().getFrom().getId());
-                        sendTextRecall(update, "恭喜注册成功！送你10枚【CJ币】");
+        try {
+            Message message = update.getMessage();
+//            if (Objects.nonNull(message) && (Constant.PRIVATE).equals(message.getChat().getType())) {
+            /*
+             * 和机器人交互
+             * */
+            if (update.hasMessage() && message.hasText() && !update.hasCallbackQuery()) {
+                try {
+                    long chatId = message.getChatId();
+                    String messageText = message.getText();
+                    if (Constant.CJ.equals(messageText)) {
+                        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+                        // 创建一个 InlineKeyboardMarkup 对象，并设置键盘的按钮
+                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.PHOENIX_MENU, null, "", ""));
+                        // 创建一个 SendMessage 对象，并将 InlineKeyboardMarkup 对象作为参数传递给 setReplyMarkup() 方法
+                        executeAsync(SendMessage.builder()
+                                .chatId(chatId)
+                                .text("请选择以下感兴趣地区(数据每天00:00开始更新最新数据):\n由于是个人运营，所以服务器费用也是自己出，象征性收点小钱;" +
+                                        "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了，而且数据量还很全。")
+                                .replyMarkup(keyboardMarkup)
+                                .build());
+                    } else if (Constant.HELP.equals(messageText)) {
+                        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.USER_MENU, null, "", ""));
+                        executeAsync(SendMessage.builder()
+                                .chatId(chatId)
+                                .text("帮助列表:")
+                                .replyMarkup(keyboardMarkup)
+                                .build());
+                    } else if (Constant.REGISTER.equals(messageText)) {
+                        Long userId = message.getFrom().getId();
+                        if (Objects.isNull(botMapper.selectUser(userId))) {
+                            botMapper.addUser(message.getFrom().getId());
+                            sendTextRecall(update, "恭喜注册成功！送你10枚【CJ币】");
+                        } else {
+                            sendTextRecall(update, "你已经是本凤皇帮会员,请洗澡去~");
+                        }
                     } else {
-                        sendTextRecall(update, "你已经是本凤皇帮会员,请洗澡去~");
+                        executeAsync(SendMessage.builder()
+                                .chatId(chatId)
+                                .text("输入 /cj 开始选凤\n输入 /help 获取其他功能\n输入 /register 点击注册送【出击币】").build());
                     }
-                } else {
-                    executeAsync(SendMessage.builder()
-                            .chatId(chatId)
-                            .text("输入 /cj 开始选凤\n输入 /help 获取其他功能\n输入 /register 点击注册送【出击币】").build());
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
                 }
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
+            } else if (update.hasCallbackQuery()) {
+                try {
+                    onCallbackQueryReceived(update.getCallbackQuery());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-        } else if (update.hasCallbackQuery()) {
-            try {
-                onCallbackQueryReceived(update.getCallbackQuery());
-            } catch (Exception e) {
-                e.printStackTrace();
+            /*} else if (Objects.nonNull(message) && (Constant.SUPERGROUP).equals(message.getChat().getType())) {
+             *//*
+             * 和群组聊天
+             * *//*
+
+                executeAsync(SendMessage.builder()
+                        .chatId(message.getChatId())
+                        .text("过来单独找我私聊呀！！")
+                        .build());
             }
+            *//*
+             * 和频道聊天
+             * *//*
+            else {
+                Message channelPost = update.getChannelPost();
+                executeAsync(SendMessage.builder()
+                        .chatId(channelPost.getChatId())
+                        .text("你好，这是凤皇帮频道" + channelPost.getText())
+                        .build());
+
+            }*/
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -172,6 +198,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 .build());
     }
 
+
+
     /**
      * 带撤回的消息发送
      *
@@ -194,95 +222,169 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         }, Constant.DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
-    public void onCallbackQueryReceived(CallbackQuery callbackQuery) throws TelegramApiException, IOException {
-        // 处理内联键盘回调
-        String data = callbackQuery.getData();
-        long chatId = callbackQuery.getMessage().getChatId();
-        Integer messageId = callbackQuery.getMessage().getMessageId();
-        Long userId = callbackQuery.getFrom().getId();
+    public void onCallbackQueryReceived(CallbackQuery callbackQuery) {
+        try {
+            // 处理内联键盘回调
+            String data = callbackQuery.getData();
+            long chatId = callbackQuery.getMessage().getChatId();
+            Integer messageId = callbackQuery.getMessage().getMessageId();
+            Long userId = callbackQuery.getFrom().getId();
 
-        //查询具体值
-        if (data.contains(Constant.LIST)) {
-            String id = data.split(Constant.SEPARATOR)[1].trim();
-            Phoenix targetPhoenix = botMapper.getTargetPhoenix(id);
-            Message preText = execute(SendMessage.builder()
-                    .chatId(chatId)
-                    .text(id + "号凤女准备中，请先去洗澡...")
-                    .build());
+            //查询具体值
+            if (data.contains(Constant.LIST)) {
+                showSinglePhoenix(chatId, userId, data.split(Constant.SEPARATOR)[1].trim());
+            } else if (data.contains(Constant.PAGE)) {
+                PageInfo<Phoenix> phoenixes = PageHelper.startPage(Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), Constant.PAGE_SIZE).doSelectPageInfo(() -> botMapper.listPhoenix());
+                //直接在原有消息基础上修改内容
+                execute(EditMessageText.builder()
+                        .chatId(chatId)
+                        .messageId(messageId)
+                        .text(pinList(phoenixes.getList()))
+                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
+                        .build());
+            } else if (data.contains(Constant.BALANCE)) {
+                UserVO userVO = botMapper.selectUser(userId);
+                if (Objects.isNull(userVO)) {
+                    this.sendText(chatId, "您的身份为：未注册\n您的CJ币余额为：0\n请输入 /register 进行注册");
+                } else {
+                    this.sendText(chatId, "您的身份为：" + userVO.getType() + "\n您的CJ币余额为：" + userVO.getBalance());
+                }
+            } else if (data.contains(Constant.PAY)) {
+                chooseMethod(chatId, userId);
+            } else if (data.contains(Constant.BOOK)) {
+                this.sendText(chatId, "（1）注册只能输入 /register 来执行，用户分为三种：\n" +
+                        "\t第一种：凤斗者【免费】，只能使用CJ币来解锁所有楼凤；\n" +
+                        "\t第二种：凤斗王【30元】，解锁任一地区的楼凤；比如你在上海，你能免CJ币查询上海所有楼凤，而其他地区需要使用CJ币购买；\n" +
+                        "\t第三种：凤号斗罗【99元】，解锁全国楼凤；\n" +
+                        "（2）凡是新注册用户，初始CJ币都会奖励10枚；\n" +
+                        "（3）目前定价是【7枚/凤】，购买定价为【1元/5枚】，后期会根据楼凤的质量来区分不同的定价，但能保证不贵；且一次兑换永久有效，比如你解锁了一个楼凤，此后这个楼凤对你永久免费展示；\n" +
+                        "（4）套餐分为以下三种：\n" +
+                        "\t探花郎：【6元/35枚】\n" +
+                        "\t探花秀才：【15元/95枚】\n" +
+                        "\t淫王：【25元/160枚】");
+            } else if (data.contains(Constant.BUY)) {
+                buyPhoenix(chatId, userId, data.split(Constant.SEPARATOR));
+            } else if (data.contains(Constant.DELAY_METHOD)) {
+                executeAsync(SendPhoto.builder().chatId(chatId)
+                        .photo(new InputFile(new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\method1.jpg")))
+                        .caption("千万别忘记备注您的用户编号：" + userId)
+                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "")).build())
+                        .build());
+            } else if (data.equals(String.valueOf(Constant.RED_BAG))) {
+                this.sendText(chatId, "已进入24小时验证通道，24小时内未成功原路退回");
+            } else {
+                //分页
+                PageInfo<Phoenix> phoenixes = PageHelper.startPage(Constant.ONE, Constant.PAGE_SIZE)
+                        .doSelectPageInfo(() -> botMapper.listPhoenix());
+                execute(SendMessage.builder()
+                        .chatId(chatId)
+                        .text(pinList(phoenixes.getList()))
+                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
+                        .build());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * 查看单个凤详细信息
+     *
+     * @param chatId 频道id
+     * @param userId 用户id
+     * @param id     凤id
+     */
+    private void showSinglePhoenix(Long chatId, Long userId, String id) throws TelegramApiException {
+        Phoenix targetPhoenix = botMapper.getTargetPhoenix(id);
+        Message preText = execute(SendMessage.builder()
+                .chatId(chatId)
+                .text(id + "号凤女准备中，请先去洗澡...")
+                .build());
+        Integer ifLocked = botMapper.userPhoenixAction(userId, id);
+        if (Objects.isNull(ifLocked) || ifLocked == 0) {
             //生成UUID，用于后期更改词条消息的隐藏内容
-            String uuid = UUID.randomUUID().toString().replaceAll(Constant.SEPARATOR, "");
+            String uuid = UUID.randomUUID().toString().replaceAll(Constant.SEPARATOR, Constant.VOID);
             // 图片处理
             SendPhoto photo = SendPhoto.builder().chatId(chatId)
                     .photo(new InputFile(processImage(targetPhoenix)))
                     .caption(targetPhoenix.getRemark())
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.SINGLE_PHOENIX, null, id, uuid)).build())
+                    .replyMarkup(InlineKeyboardMarkup.builder()
+                            .keyboard(getInnerMenu(Constant.SINGLE_PHOENIX, null, id, uuid)).build())
                     .build();
-            //撤回提示消息
-            executeAsync(new DeleteMessage(String.valueOf(chatId), preText.getMessageId()));
             Message execute = execute(photo);
             //将UUID存入redis，方便后续能取到其值
-            redisDao.setHour(uuid, execute.getMessageId(), 3);
-        } else if (data.contains(Constant.PAGE)) {
-            PageInfo<Phoenix> phoenixes = PageHelper.startPage(Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), Constant.PAGE_SIZE).doSelectPageInfo(() -> botMapper.listPhoenix());
-            //直接在原有消息基础上修改内容
-            execute(EditMessageText.builder()
-                    .chatId(chatId)
-                    .messageId(messageId)
-                    .text(pinList(phoenixes.getList()))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
-                    .build());
-        } else if (data.contains(Constant.BALANCE)) {
-            UserVO userVO = botMapper.selectUser(userId);
-            if (Objects.isNull(userVO)) {
-                this.sendText(chatId, "您的身份为：未注册\n您的CJ币余额为：0\n请输入 /register 进行注册");
+            redisDao.setSecond(uuid, execute.getMessageId(), Constant.THIRTY);
+        } else {
+            //已解锁，直接展示真实内容
+            executeAsync(SendPhoto.builder().chatId(chatId)
+                    .photo(new InputFile(processImage(targetPhoenix)))
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "")).build())
+                    .caption(targetPhoenix.getRealContent()).build()
+            );
+        }
+        //撤回提示消息
+        executeAsync(new DeleteMessage(String.valueOf(chatId), preText.getMessageId()));
+    }
+
+    /**
+     * 检查是不是凤皇帮用户
+     *
+     * @param userId 用户id
+     * @return 是否存在
+     */
+    private UserVO checkIsUser(Long userId) {
+        UserVO userVO = botMapper.selectUser(userId);
+        if (Objects.nonNull(userVO)) {
+            return userVO;
+        }
+        return null;
+    }
+
+    /**
+     * 兑换凤
+     *
+     * @param chatId 频道id
+     * @param userId 用户id
+     * @param ids    获取redis的value
+     */
+    private void buyPhoenix(Long chatId, Long userId, String[] ids) throws TelegramApiException {
+        UserVO userVO = botMapper.selectUser(userId);
+        if (Objects.nonNull(userVO)) {
+            BigDecimal subtract = userVO.getBalance().subtract(new BigDecimal("7"));
+            if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
+                String phoenixId = ids[1].trim();
+                //更改用户余额
+                CompletableFuture.runAsync(() -> {
+                    subtractAndLink(userId, phoenixId, subtract, ids, chatId);
+                });
             } else {
-                this.sendText(chatId, "您的身份为：" + userVO.getType() + "\n您的CJ币余额为：" + userVO.getBalance());
-            }
-        } else if (data.contains(Constant.PAY)) {
-            this.sendText(chatId, "该功能开发中");
-        } else if (data.contains(Constant.BOOK)) {
-            this.sendText(chatId, "（1）注册只能输入 /register 来执行，用户分为三种：\n" +
-                    "\t第一种：凤斗者【免费】，只能使用CJ币来解锁所有楼凤；\n" +
-                    "\t第二种：凤斗王【30元】，解锁任一地区的楼凤；比如你在上海，你能免CJ币查询上海所有楼凤，而其他地区需要使用CJ币购买；\n" +
-                    "\t第三种：凤号斗罗【99元】，解锁全国楼凤；\n" +
-                    "（2）凡是新注册用户，初始CJ币都会奖励10枚；\n" +
-                    "（3）目前定价是【7枚/凤】，购买定价为【1元/5枚】，后期会根据楼凤的质量来区分不同的定价，但能保证不贵；且一次兑换永久有效，比如你解锁了一个楼凤，此后这个楼凤对你永久免费展示；\n" +
-                    "（4）套餐分为以下三种：\n" +
-                    "\t探花郎：【6元/35枚】\n" +
-                    "\t探花秀才：【15元/95枚】\n" +
-                    "\t淫王：【25元/160枚】");
-        } else if (data.contains(Constant.BUY)) {
-            UserVO userVO = botMapper.selectUser(userId);
-            if (Objects.nonNull(userVO)) {
-                BigDecimal subtract = userVO.getBalance().subtract(new BigDecimal("7"));
-                if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
-                    String[] ids = data.split(Constant.SEPARATOR);
-                    String phoenixId = ids[1].trim();
-                    executeAsync(EditMessageCaption.builder()
-                            .chatId(chatId)
-                            .messageId((Integer) redisDao.get(ids[2].trim()))
-                            .caption(botMapper.realContent(phoenixId))
-                            .build());
-                    //更改用户余额
-                    CompletableFuture.runAsync(() -> {
-                        subtractAndLink(userId, phoenixId, subtract);
-                    });
-                } else {
-                    this.sendText(chatId, "CJ币不足，请点击充值按钮！");
-                }
+                this.sendText(chatId, "CJ币不足，请点击充值按钮！");
             }
         } else {
-            //分页
-            PageInfo<Phoenix> phoenixes = PageHelper.startPage(Constant.ONE, Constant.PAGE_SIZE)
-                    .doSelectPageInfo(() -> botMapper.listPhoenix());
-            execute(SendMessage.builder()
-                    .chatId(chatId)
-                    .text(pinList(phoenixes.getList()))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
-                    .build());
+            this.sendText(chatId, "请先点击 /register 成为凤皇帮用户!");
         }
     }
 
+
+    /**
+     * 选择付款方式
+     */
+    private void chooseMethod(Long chatId, Long userId) throws TelegramApiException {
+        executeAsync(SendMessage.builder()
+                .chatId(chatId)
+                .text("您的用户编号为：【" + userId + "】\n" +
+                        "购买方式：\n" +
+                        "（1）积分延时到账：\n" +
+                        "● 发送支付宝口令红包【必须备注您的用户编号】，没有备注用户编号的，钱会在24小时退回到您的账户下；\n" +
+                        "● 若24小时内没处理，系统不会收你的红包，并且还会赠予你【20】枚CJ币以表歉意；\n" +
+                        "（2）积分实时到账：\n" +
+                        "● 实时到账，可以到帐后立马解锁；\n" +
+                        "点击下面按钮，查看具体的付款方式及其步骤：")
+                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PAY_METHOD, null, "", "")).build())
+                .build()
+        );
+    }
 
     /**
      * 获取内嵌菜单
@@ -294,23 +396,26 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         switch (type) {
             case Constant.PHOENIX_MENU: {
                 List<InlineKeyboardButton> row1 = new ArrayList<>();
-                row1.add(InlineKeyboardButton.builder().text("上海").callbackData("sh").build());
-                row1.add(InlineKeyboardButton.builder().text("深圳(开发中)").callbackData("sz").build());
-                row1.add(InlineKeyboardButton.builder().text("北京(开发中)").callbackData("bj").build());
-                List<InlineKeyboardButton> row2 = new ArrayList<>();
-                row2.add(InlineKeyboardButton.builder().text("广州(开发中)").callbackData("gz").build());
-                row2.add(InlineKeyboardButton.builder().text("长沙(开发中)").callbackData("cs").build());
+                row1.add(InlineKeyboardButton.builder().text("上海").callbackData(Constant.SH).build());
+                //row1.add(InlineKeyboardButton.builder().text("深圳(开发中)").callbackData("sz").build());
+                //row1.add(InlineKeyboardButton.builder().text("北京(开发中)").callbackData("bj").build());
+                //List<InlineKeyboardButton> row2 = new ArrayList<>();
+                //row2.add(InlineKeyboardButton.builder().text("广州(开发中)").callbackData("gz").build());
+                //row2.add(InlineKeyboardButton.builder().text("长沙(开发中)").callbackData("cs").build());
                 rows.add(row1);
-                rows.add(row2);
+                //rows.add(row2);
                 return rows;
             }
             case Constant.USER_MENU:
                 List<InlineKeyboardButton> row3 = new ArrayList<>();
-                row3.add(InlineKeyboardButton.builder().text("购买/升级").callbackData("pay").build());
-                row3.add(InlineKeyboardButton.builder().text("用户信息").callbackData("balance").build());
-                row3.add(InlineKeyboardButton.builder().text("使用说明").callbackData("book").build());
-                row3.add(InlineKeyboardButton.builder().text("售后反馈").callbackData("sale").build());
+                row3.add(InlineKeyboardButton.builder().text("购买积分").callbackData(Constant.PAY).build());
+                row3.add(InlineKeyboardButton.builder().text("用户信息").callbackData(Constant.BALANCE).build());
+                row3.add(InlineKeyboardButton.builder().text("使用说明").callbackData(Constant.BOOK).build());
+                row3.add(InlineKeyboardButton.builder().text("售后反馈").callbackData(Constant.SALE).build());
+                List<InlineKeyboardButton> row31 = new ArrayList<>();
+                row31.add(InlineKeyboardButton.builder().text("兑换身份").callbackData(Constant.IDENTITY).build());
                 rows.add(row3);
+                rows.add(row31);
                 return rows;
             case Constant.PHOENIX_LIST:
                 List<T> list = pageInfo.getList();
@@ -344,10 +449,27 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 return rows;
             case Constant.SINGLE_PHOENIX:
                 List<InlineKeyboardButton> row4 = new ArrayList<>();
-                row4.add(InlineKeyboardButton.builder().text("需【7】枚CJ币").callbackData("buy-" + id + "-" + redisId).build());
-                row4.add(InlineKeyboardButton.builder().text("充值").callbackData("pay").build());
-                row4.add(InlineKeyboardButton.builder().text("余额查询").callbackData("balance").build());
+                row4.add(InlineKeyboardButton.builder().text("【7】枚").callbackData("buy-" + id + "-" + redisId).build());
+                row4.add(InlineKeyboardButton.builder().text("充值").callbackData(Constant.PAY).build());
+                row4.add(InlineKeyboardButton.builder().text("余额查询").callbackData(Constant.BALANCE).build());
                 rows.add(row4);
+                return rows;
+            case Constant.AFTER_BUY:
+                List<InlineKeyboardButton> row5 = new ArrayList<>();
+                row5.add(InlineKeyboardButton.builder().text("充值").callbackData(Constant.PAY).build());
+                row5.add(InlineKeyboardButton.builder().text("余额查询").callbackData(Constant.BALANCE).build());
+                rows.add(row5);
+                return rows;
+            case Constant.PAY_METHOD:
+                List<InlineKeyboardButton> row6 = new ArrayList<>();
+                row6.add(InlineKeyboardButton.builder().text("延时到账").callbackData(Constant.DELAY_METHOD).build());
+                row6.add(InlineKeyboardButton.builder().text("实时到账").callbackData(Constant.TIMELY_METHOD).build());
+                rows.add(row6);
+                return rows;
+            case Constant.RED_BAG:
+                List<InlineKeyboardButton> row7 = new ArrayList<>();
+                row7.add(InlineKeyboardButton.builder().text("红包已发送,点击验证").callbackData(String.valueOf(Constant.RED_BAG)).build());
+                rows.add(row7);
                 return rows;
             default:
                 return rows;
@@ -362,20 +484,29 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
 
     @Override
     @Transactional
-    public void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract) {
+    public void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract, String[] ids, Long chatId) {
         // 开始事务
         DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
         TransactionStatus status = transactionManager.getTransaction(def);
         try {
+            //更新余额
             botMapper.updateBalance(userId, subtract);
-            botMapper.linkBuyAction(userId, phoenixId);
+            //新增活动
+            botMapper.linkBuyAction(userId, phoenixId, Constant.UNLOCKED);
+            //从redis中获取已经显示的消息，将它替换展开
+            executeAsync(EditMessageCaption.builder()
+                    .chatId(chatId)
+                    .messageId((Integer) redisDao.get(ids[2].trim()))
+                    .caption(botMapper.realContent(phoenixId))
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "")).build())
+                    .build());
             // 提交事务
             transactionManager.commit(status);
         } catch (Exception e) {
+            log.error("事务报错：" + e);
             // 回滚事务
             transactionManager.rollback(status);
-            e.printStackTrace();
         }
     }
 

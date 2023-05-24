@@ -20,6 +20,8 @@ public interface BotService {
      * @param userId    用户id
      * @param phoenixId 凤id
      * @param subtract  余额
+     * @param ids       其他id
+     * @param chatId    频道id
      */
-    void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract);
+    void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract, String[] ids, Long chatId);
 }

@@ -33,6 +33,11 @@ public class RedisDao {
         redisTemplate.opsForValue().set(key, value, hour, TimeUnit.HOURS);
     }
 
+
+    public void setSecond(String key, Object value, Integer second) {
+        redisTemplate.opsForValue().set(key, value, second, TimeUnit.SECONDS);
+    }
+
     public Object get(String key) {
         return redisTemplate.opsForValue().get(key);
     }
