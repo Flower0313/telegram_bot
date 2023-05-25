@@ -19,17 +19,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.ActionType;
+import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ForceReplyKeyboard;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-
 import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -63,6 +63,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     @Autowired
     private RedisDao redisDao;
 
+
     /**
      * 加载telegram机器人
      */
@@ -81,15 +82,6 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
 
     public BotServiceImpl() {
         super(new HoldenOptions(), Constant.TOKEN);
-
-    }
-
-
-    /**
-     * @return bot_api创建者id
-     */
-    public int creatorId() {
-        return 313;
     }
 
     /**
@@ -106,10 +98,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
              * 和机器人交互
              * */
             if (update.hasMessage() && message.hasText() && !update.hasCallbackQuery()) {
-                try {
+
+                if (Constant.PRIVATE.equals(message.getChat().getType())) {
                     long chatId = message.getChatId();
+                    //execute(SendMessage.builder().chatId(chatId).text("fuck you").replyMarkup(this.forceReply()).build());
                     String messageText = message.getText();
-                    if (Constant.CJ.equals(messageText)) {
+                    if (messageText.contains(Constant.CJ)) {
                         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
                         // 创建一个 InlineKeyboardMarkup 对象，并设置键盘的按钮
                         keyboardMarkup.setKeyboard(getInnerMenu(Constant.PHOENIX_MENU, null, "", ""));
@@ -120,7 +114,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                                         "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了，而且数据量还很全。")
                                 .replyMarkup(keyboardMarkup)
                                 .build());
-                    } else if (Constant.HELP.equals(messageText)) {
+                    } else if (messageText.contains(Constant.HELP)) {
                         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
                         keyboardMarkup.setKeyboard(getInnerMenu(Constant.USER_MENU, null, "", ""));
                         executeAsync(SendMessage.builder()
@@ -128,28 +122,24 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                                 .text("帮助列表:")
                                 .replyMarkup(keyboardMarkup)
                                 .build());
-                    } else if (Constant.REGISTER.equals(messageText)) {
+                    } else if (messageText.contains(Constant.REGISTER)) {
                         Long userId = message.getFrom().getId();
                         if (Objects.isNull(botMapper.selectUser(userId))) {
                             botMapper.addUser(message.getFrom().getId());
-                            sendTextRecall(update, "恭喜注册成功！送你10枚【CJ币】");
+                            sendTextRecall(chatId, "恭喜注册成功！送你20枚【CJ币】", 4);
                         } else {
-                            sendTextRecall(update, "你已经是本凤皇帮会员,请洗澡去~");
+                            sendTextRecall(chatId, "你已经是本凤皇帮会员,请洗澡去~", 3);
                         }
                     } else {
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
                                 .text("输入 /cj 开始选凤\n输入 /help 获取其他功能\n输入 /register 点击注册送【出击币】").build());
                     }
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
+                } else {
+                    this.sendTextRecall(message.getChatId(), "请私聊我哦，有惊喜！", 2);
                 }
             } else if (update.hasCallbackQuery()) {
-                try {
-                    onCallbackQueryReceived(update.getCallbackQuery());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                onCallbackQueryReceived(update.getCallbackQuery());
             }
             /*} else if (Objects.nonNull(message) && (Constant.SUPERGROUP).equals(message.getChat().getType())) {
              *//*
@@ -199,14 +189,14 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     }
 
 
-
     /**
      * 带撤回的消息发送
      *
-     * @param update 用户消息
+     * @param chatId 频道id
+     * @param text   消息内容
+     * @throws TelegramApiException
      */
-    private void sendTextRecall(Update update, String text) throws TelegramApiException {
-        Long chatId = update.getMessage().getChatId();
+    private void sendTextRecall(Long chatId, String text, Integer duration) throws TelegramApiException {
         Message message = execute(SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
@@ -219,7 +209,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
-        }, Constant.DELAY_SECONDS, TimeUnit.SECONDS);
+        }, duration, TimeUnit.SECONDS);
     }
 
     public void onCallbackQueryReceived(CallbackQuery callbackQuery) {
@@ -230,11 +220,14 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             Integer messageId = callbackQuery.getMessage().getMessageId();
             Long userId = callbackQuery.getFrom().getId();
 
+
+
             //查询具体值
             if (data.contains(Constant.LIST)) {
                 showSinglePhoenix(chatId, userId, data.split(Constant.SEPARATOR)[1].trim());
             } else if (data.contains(Constant.PAGE)) {
-                PageInfo<Phoenix> phoenixes = PageHelper.startPage(Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), Constant.PAGE_SIZE).doSelectPageInfo(() -> botMapper.listPhoenix());
+                PageInfo<Phoenix> phoenixes = PageHelper.startPage(Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), Constant.PAGE_SIZE)
+                        .doSelectPageInfo(() -> botMapper.listPhoenix());
                 //直接在原有消息基础上修改内容
                 execute(EditMessageText.builder()
                         .chatId(chatId)
@@ -266,12 +259,20 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 buyPhoenix(chatId, userId, data.split(Constant.SEPARATOR));
             } else if (data.contains(Constant.DELAY_METHOD)) {
                 executeAsync(SendPhoto.builder().chatId(chatId)
-                        .photo(new InputFile(new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\method1.jpg")))
-                        .caption("千万别忘记备注您的用户编号：" + userId)
+                        .photo(new InputFile(new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\delay.jpg")))
+                        .caption("【延迟到账】- 支付宝口令红包\n千万别忘记将口令设置为【cj+您的用户编号】" + "\n你需要输入的红包口令为：cj" + userId)
                         .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "")).build())
                         .build());
+            } else if (data.contains(Constant.TIMELY_METHOD)) {
+                this.sendTextRecall(chatId, "此功能还在开发中，旨在追求买家的便利性！", 3);
             } else if (data.equals(String.valueOf(Constant.RED_BAG))) {
-                this.sendText(chatId, "已进入24小时验证通道，24小时内未成功原路退回");
+                botMapper.addRedBag(userId);
+                this.typeAction(chatId);
+                this.sendTextRecall(chatId, "您已进入24小时验证通道，24小时内未成功原路退回", 5);
+            } else if (data.contains(Constant.SALE)) {
+                execute(SendMessage.builder().chatId(chatId).text("t.me/welcometophoenix").build());
+            } else if (data.contains(Constant.IDENTITY)) {
+                this.sendTextRecall(chatId, "此功能开发中", 3);
             } else {
                 //分页
                 PageInfo<Phoenix> phoenixes = PageHelper.startPage(Constant.ONE, Constant.PAGE_SIZE)
@@ -297,6 +298,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      */
     private void showSinglePhoenix(Long chatId, Long userId, String id) throws TelegramApiException {
         Phoenix targetPhoenix = botMapper.getTargetPhoenix(id);
+        //this.typeAction(chatId);
         Message preText = execute(SendMessage.builder()
                 .chatId(chatId)
                 .text(id + "号凤女准备中，请先去洗澡...")
@@ -315,6 +317,10 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             Message execute = execute(photo);
             //将UUID存入redis，方便后续能取到其值
             redisDao.setSecond(uuid, execute.getMessageId(), Constant.THIRTY);
+            //增加访问次数
+            CompletableFuture.runAsync(() -> {
+                botMapper.linkBuyAction(userId, id, 0);
+            });
         } else {
             //已解锁，直接展示真实内容
             executeAsync(SendPhoto.builder().chatId(chatId)
@@ -339,6 +345,15 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             return userVO;
         }
         return null;
+    }
+
+    /**
+     * 输入“正在处理。。”
+     *
+     * @param chatId 频道id
+     */
+    private void typeAction(Long chatId) throws TelegramApiException {
+        executeAsync(SendChatAction.builder().chatId(chatId).action(String.valueOf(ActionType.TYPING)).build());
     }
 
     /**
@@ -376,7 +391,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 .text("您的用户编号为：【" + userId + "】\n" +
                         "购买方式：\n" +
                         "（1）积分延时到账：\n" +
-                        "● 发送支付宝口令红包【必须备注您的用户编号】，没有备注用户编号的，钱会在24小时退回到您的账户下；\n" +
+                        "● 发送支付宝口令红包【口令必须输入cj+您的用户编号】，若口令不为用户编号的，钱会在24小时内退回到您的账户下；\n" +
                         "● 若24小时内没处理，系统不会收你的红包，并且还会赠予你【20】枚CJ币以表歉意；\n" +
                         "（2）积分实时到账：\n" +
                         "● 实时到账，可以到帐后立马解锁；\n" +
@@ -468,7 +483,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 return rows;
             case Constant.RED_BAG:
                 List<InlineKeyboardButton> row7 = new ArrayList<>();
-                row7.add(InlineKeyboardButton.builder().text("红包已发送,点击验证").callbackData(String.valueOf(Constant.RED_BAG)).build());
+                row7.add(InlineKeyboardButton.builder().text("红包若已发送,点击确认").callbackData(String.valueOf(Constant.RED_BAG)).build());
                 rows.add(row7);
                 return rows;
             default:
@@ -522,11 +537,15 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             String remark = phoenix.getRemark();
             replyText.append(phoenix.getId()).append(">>")
                     .append(remark.substring(0, Math.min(remark.length(), 30))).append("\n")
-                    .append("最低消费:").append(phoenix.getMinPrice()).append("\n")
-                    .append("--------------------------------------\n");
+                    .append("最低消费:").append(phoenix.getMinPrice()).append("\n-------------------------------------\n");
         }
         replyText.append("点击具体序号查看详情（含图片）↓");
         return replyText.toString();
+    }
+
+    private ForceReplyKeyboard forceReply(){
+        ForceReplyKeyboard hello = ForceReplyKeyboard.builder().forceReply(true).inputFieldPlaceholder("你好").build();
+        return hello;
     }
 
 

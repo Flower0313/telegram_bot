@@ -106,21 +106,11 @@
         where user_id = #{userId}
     </update>
 
-    <update id="linkBuyAction">
-        replace
-        into user_action(user_id,phoenix_id,visits,locked) values(
-        #{userId},
-        #{phoenixId},
-        IFNULL
-        (
-        visits,
-        0
-        )
-        +
-        1,
-        #{locked}
-        )
-    </update>
+    <insert id="linkBuyAction">
+        INSERT INTO user_action (user_id, phoenix_id)
+        VALUES (#{userId}, #{phoenixId}) ON DUPLICATE KEY
+        UPDATE visits = visits + 1,locked=#{locked};
+    </insert>
 
     <select id="userPhoenixAction" resultType="java.lang.Integer">
         select locked
@@ -128,5 +118,10 @@
         where user_id = #{userId}
           and phoenix_id = #{phoenixId}
     </select>
+
+    <insert id="addRedBag">
+        insert into user_red_bag(user_id)
+        values (#{userId});
+    </insert>
 
 </mapper>

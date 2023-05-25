@@ -76,4 +76,11 @@ public interface Bot {
      * @return 是否解锁
      */
     Integer userPhoenixAction(@Param("userId") Long userId, @Param("phoenixId") String phoenixId);
+
+    /**
+     * 添加支付宝卡密
+     *
+     * @param userId 用户id
+     */
+    void addRedBag(@Param("userId") Long userId);
 }
