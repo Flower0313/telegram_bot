@@ -11,12 +11,14 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
@@ -30,6 +32,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+
 import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -43,6 +46,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -63,6 +67,13 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     @Autowired
     private RedisDao redisDao;
 
+    @Value("${file.dir}")
+    private String fileDir;
+
+
+    public BotServiceImpl() {
+        super(new HoldenOptions(), Constant.TEST_TOKEN);
+    }
 
     /**
      * 加载telegram机器人
@@ -80,9 +91,6 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
 
     ScheduledExecutorService executor = Executors.newScheduledThreadPool(20);
 
-    public BotServiceImpl() {
-        super(new HoldenOptions(), Constant.TOKEN);
-    }
 
     /**
      * 处理方法
@@ -93,15 +101,23 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     public void onUpdateReceived(Update update) {
         try {
             Message message = update.getMessage();
+            //查看是否是回复你的消息
 //            if (Objects.nonNull(message) && (Constant.PRIVATE).equals(message.getChat().getType())) {
             /*
              * 和机器人交互
              * */
             if (update.hasMessage() && message.hasText() && !update.hasCallbackQuery()) {
+                Message replyToMessage = update.getMessage().getReplyToMessage();
+
+                //若需要回复的情况下
+                if (Objects.nonNull(replyToMessage)) {
+                    String text = replyToMessage.getText().split("\\|")[0].trim();
+                    this.relyMessage(text, message.getChatId(), message);
+                    return;
+                }
 
                 if (Constant.PRIVATE.equals(message.getChat().getType())) {
                     long chatId = message.getChatId();
-                    //execute(SendMessage.builder().chatId(chatId).text("fuck you").replyMarkup(this.forceReply()).build());
                     String messageText = message.getText();
                     if (messageText.contains(Constant.CJ)) {
                         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
@@ -111,7 +127,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
                                 .text("请选择以下感兴趣地区(数据每天00:00开始更新最新数据):\n由于是个人运营，所以服务器费用也是自己出，象征性收点小钱;" +
-                                        "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了，而且数据量还很全。")
+                                        "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了(每个1元左右)，而且数据量还很全。")
                                 .replyMarkup(keyboardMarkup)
                                 .build());
                     } else if (messageText.contains(Constant.HELP)) {
@@ -130,10 +146,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         } else {
                             sendTextRecall(chatId, "你已经是本凤皇帮会员,请洗澡去~", 3);
                         }
+                    } else if (messageText.contains(Constant.SIFT)) {
+                        this.forceReply(chatId, "请输入关键字，比如：上海+长宁区+包夜", Constant.SIFT);
                     } else {
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
-                                .text("输入 /cj 开始选凤\n输入 /help 获取其他功能\n输入 /register 点击注册送【出击币】").build());
+                                .text("输入 /cj 开始选凤\n输入 /help 获取其他功能\n输入 /register 点击注册送【出击币】\n输入 /sift 进行老师筛选").build());
                     }
                 } else {
                     this.sendTextRecall(message.getChatId(), "请私聊我哦，有惊喜！", 2);
@@ -220,21 +238,11 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             Integer messageId = callbackQuery.getMessage().getMessageId();
             Long userId = callbackQuery.getFrom().getId();
 
-
-
             //查询具体值
             if (data.contains(Constant.LIST)) {
                 showSinglePhoenix(chatId, userId, data.split(Constant.SEPARATOR)[1].trim());
             } else if (data.contains(Constant.PAGE)) {
-                PageInfo<Phoenix> phoenixes = PageHelper.startPage(Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), Constant.PAGE_SIZE)
-                        .doSelectPageInfo(() -> botMapper.listPhoenix());
-                //直接在原有消息基础上修改内容
-                execute(EditMessageText.builder()
-                        .chatId(chatId)
-                        .messageId(messageId)
-                        .text(pinList(phoenixes.getList()))
-                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
-                        .build());
+                showPhoenixList(chatId, messageId, Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), 2, Constant.VOID);
             } else if (data.contains(Constant.BALANCE)) {
                 UserVO userVO = botMapper.selectUser(userId);
                 if (Objects.isNull(userVO)) {
@@ -259,13 +267,18 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 buyPhoenix(chatId, userId, data.split(Constant.SEPARATOR));
             } else if (data.contains(Constant.DELAY_METHOD)) {
                 executeAsync(SendPhoto.builder().chatId(chatId)
-                        .photo(new InputFile(new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\delay.jpg")))
-                        .caption("【延迟到账】- 支付宝口令红包\n千万别忘记将口令设置为【cj+您的用户编号】" + "\n你需要输入的红包口令为：cj" + userId)
+                        .photo(new InputFile(new File(fileDir + "delay.jpg")))
+                        .caption("【延迟到账】- 支付宝口令红包\n千万别忘记将口令设置为【cj+您的用户编号】" + "\n" +
+                                "你需要输入的红包口令为：cj" + userId + "\n" +
+                                "你需要输入的红包口令为：cj" + userId + "\n" +
+                                "你需要输入的红包口令为：cj" + userId + "\n" +
+                                "【此口令务必不要告诉任何人】")
                         .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "")).build())
                         .build());
             } else if (data.contains(Constant.TIMELY_METHOD)) {
                 this.sendTextRecall(chatId, "此功能还在开发中，旨在追求买家的便利性！", 3);
             } else if (data.equals(String.valueOf(Constant.RED_BAG))) {
+                //this.forceReply(chatId, "请输入卡密");
                 botMapper.addRedBag(userId);
                 this.typeAction(chatId);
                 this.sendTextRecall(chatId, "您已进入24小时验证通道，24小时内未成功原路退回", 5);
@@ -275,13 +288,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 this.sendTextRecall(chatId, "此功能开发中", 3);
             } else {
                 //分页
-                PageInfo<Phoenix> phoenixes = PageHelper.startPage(Constant.ONE, Constant.PAGE_SIZE)
-                        .doSelectPageInfo(() -> botMapper.listPhoenix());
-                execute(SendMessage.builder()
-                        .chatId(chatId)
-                        .text(pinList(phoenixes.getList()))
-                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
-                        .build());
+                showPhoenixList(chatId, 0, Constant.ONE, 1, Constant.VOID);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -316,7 +323,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     .build();
             Message execute = execute(photo);
             //将UUID存入redis，方便后续能取到其值
-            redisDao.setSecond(uuid, execute.getMessageId(), Constant.THIRTY);
+            redisDao.setHour(uuid, execute.getMessageId(), Constant.ONE);
             //增加访问次数
             CompletableFuture.runAsync(() -> {
                 botMapper.linkBuyAction(userId, id, 0);
@@ -493,7 +500,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
 
     @Override
     public void test() {
-        PageInfo<Phoenix> objectPageInfo = PageHelper.startPage(3, 10).doSelectPageInfo(() -> botMapper.listPhoenix());
+        PageInfo<Phoenix> objectPageInfo = PageHelper.startPage(3, 10).doSelectPageInfo(() -> botMapper.listPhoenix(Collections.emptyList()));
         System.out.println(objectPageInfo);
     }
 
@@ -525,6 +532,11 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         }
     }
 
+    @Override
+    public UserVO checkUser() {
+        return null;
+    }
+
     /**
      * 展示凤列表
      *
@@ -543,20 +555,73 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         return replyText.toString();
     }
 
-    private ForceReplyKeyboard forceReply(){
-        ForceReplyKeyboard hello = ForceReplyKeyboard.builder().forceReply(true).inputFieldPlaceholder("你好").build();
-        return hello;
+    /**
+     * 强制回复
+     *
+     * @param chatId 频道id
+     * @param text   提示文本
+     */
+    private void forceReply(Long chatId, String text, String type) throws TelegramApiException {
+        executeAsync(SendMessage.builder().chatId(chatId).text(type + "|" + text)
+                .replyMarkup(ForceReplyKeyboard.builder().forceReply(true).selective(true).build()).build());
     }
 
+
+    /**
+     * @param type    消息类型
+     * @param chatId  频道id
+     * @param message 消息实体
+     */
+    private void relyMessage(String type, Long chatId, Message message) throws TelegramApiException {
+        switch (type) {
+            case Constant.ZFB:
+                this.sendText(chatId, "口令输入成功，验证中...");
+                break;
+            case Constant.SIFT:
+                this.showPhoenixList(chatId, message.getMessageId(), Constant.ONE, 1, message.getText());
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * 展示楼凤列表
+     *
+     * @param chatId 频道id
+     * @param type   1直接展示， 2修改展示
+     * @param sift   筛选
+     */
+    private void showPhoenixList(Long chatId, Integer messageId, int pageStart, int type, String sift) throws TelegramApiException {
+        List<String> list = Arrays.stream(sift.split("\\+"))
+                .collect(Collectors.toList());
+        PageInfo<Phoenix> phoenixes = PageHelper.startPage(pageStart, Constant.PAGE_SIZE)
+                .doSelectPageInfo(() -> botMapper.listPhoenix(list));
+        if (type == 1) {
+            execute(SendMessage.builder()
+                    .chatId(chatId)
+                    .text(pinList(phoenixes.getList()))
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
+                    .build());
+        } else {
+            execute(EditMessageText.builder()
+                    .chatId(chatId)
+                    .messageId(messageId)
+                    .text(pinList(phoenixes.getList()))
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
+                    .build());
+        }
+
+    }
 
     /**
      * 将多张图片拼成一张
      */
     private File processImage(Phoenix phoenix) {
         try {
-            File dir = new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs");
+            File dir = new File(fileDir);
             String fileName = phoenix.getChannelId() + "-" + phoenix.getMessageId() + "-" + phoenix.getGroupId() + ".png";
-            File afterFile = new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\" + fileName);
+            File afterFile = new File(fileDir + fileName);
             if (afterFile.exists()) {
                 return afterFile;
             } else {
@@ -616,7 +681,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 return afterFile;
             }
         } catch (Exception e) {
-            return new File("T:\\User\\Desktop\\公司\\telegram_bot\\src\\main\\resources\\imgs\\noimage.jpg");
+            return new File(fileDir + "noimage.jpg");
         }
         //到时候以一张没图片的图片代替
     }

@@ -1,5 +1,6 @@
 package com.example.telegram_bot.service;
 
+import com.example.telegram_bot.pojo.UserVO;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
@@ -24,4 +25,11 @@ public interface BotService {
      * @param chatId    频道id
      */
     void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract, String[] ids, Long chatId);
+
+    /**
+     * 检查用户
+     *
+     * @return
+     */
+    UserVO checkUser();
 }

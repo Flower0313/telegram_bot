@@ -1,5 +1,6 @@
 package com.example.telegram_bot.pojo;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 
 /**
@@ -9,7 +10,6 @@ import org.telegram.telegrambots.bots.DefaultBotOptions;
  * @Describe
  */
 public class HoldenOptions extends DefaultBotOptions {
-
     public HoldenOptions() {
         super.setProxyHost("127.0.0.1");
         super.setProxyPort(7890);

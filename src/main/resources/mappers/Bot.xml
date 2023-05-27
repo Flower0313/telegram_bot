@@ -28,24 +28,30 @@
 
     <select id="listPhoenix" resultMap="BaseResultMap">
         SELECT id,
-               channel_id,
-               message_id,
-               group_id,
-               age,
-               province,
-               city,
-               area,
-               IF
-                   (if_sw = 1, TRUE, FALSE)   AS if_sw,
-               IF
-                   (if_by = 1, TRUE, FALSE)   AS if_by,
-               IF
-                   (if_door = 1, TRUE, FALSE) AS if_door,
-               IF
-                   (if_96 = 1, TRUE, FALSE)   AS if_96,
-               min_price,
-               remark
+        channel_id,
+        message_id,
+        group_id,
+        age,
+        province,
+        city,
+        area,
+        IF
+        (if_sw = 1, TRUE, FALSE) AS if_sw,
+        IF
+        (if_by = 1, TRUE, FALSE) AS if_by,
+        IF
+        (if_door = 1, TRUE, FALSE) AS if_door,
+        IF
+        (if_96 = 1, TRUE, FALSE) AS if_96,
+        min_price,
+        remark
         FROM `dwd_building_phoenix`
+        where 1=1
+        <if test="search != null and search.size() != 0">
+            <foreach item="item" index="index" collection="search">
+                and remark like concat('%', #{item}, '%')
+            </foreach>
+        </if>
     </select>
 
     <select id="getTargetPhoenix" resultMap="BaseResultMap">

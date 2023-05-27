@@ -36,7 +36,7 @@ public class ImgServiceImpl implements ImgService {
 
     @Override
     public void test() {
-        List<Phoenix> phoenixes = botMapper.listPhoenix();
+        List<Phoenix> phoenixes = botMapper.listPhoenix(null);
         System.out.println(phoenixes);
     }
 }

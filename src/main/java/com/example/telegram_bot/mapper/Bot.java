@@ -16,9 +16,10 @@ public interface Bot {
     /**
      * 查询凤列表
      *
+     * @param search 筛选列表
      * @return @List
      */
-    List<Phoenix> listPhoenix();
+    List<Phoenix> listPhoenix(@Param("search") List<String> search);
 
     /**
      * 查询凤详情

@@ -8,6 +8,9 @@ package com.example.telegram_bot.pojo;
  */
 public class Constant {
     public static final String TOKEN = "5980870348:AAGxPlQzcpnQZEFNpiIn7NnAKaj2FVhIaxg";
+
+    public static final String TEST_TOKEN = "6011869547:AAG1vJz8xwtKEirPAEbI3NngNkwKC7qNbuU";
+
     public static final Integer DELAY_SECONDS = 3;
 
     /**
@@ -24,6 +27,11 @@ public class Constant {
      * 其他功能
      */
     public static final String HELP = "/help";
+
+    /**
+     * 筛选
+     */
+    public static final String SIFT = "/sift";
 
     /**
      * 用户注册
@@ -140,6 +148,11 @@ public class Constant {
      * 解锁
      */
     public static final int UNLOCKED = 1;
+
+    /**
+     * 支付宝红包口令
+     */
+    public static final String ZFB = "ZFKL";
 
     public static final int PHOENIX_MENU = 1001;
     public static final int USER_MENU = 1002;
