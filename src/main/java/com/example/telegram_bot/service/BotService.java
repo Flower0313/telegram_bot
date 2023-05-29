@@ -26,6 +26,7 @@ public interface BotService {
      */
     void subtractAndLink(Long userId, String phoenixId, BigDecimal subtract, String[] ids, Long chatId);
 
+
     /**
      * 检查用户
      *

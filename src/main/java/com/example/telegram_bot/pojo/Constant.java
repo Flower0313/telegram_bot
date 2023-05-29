@@ -172,6 +172,22 @@ public class Constant {
      */
     public static final int PAY_METHOD = 1006;
 
+
+    /**
+     * 斗者
+     */
+    public static final int DOU = 1008;
+
+    /**
+     * 斗王
+     */
+    public static final int DOUKING = 1009;
+
+    /**
+     * 凤号斗罗
+     */
+    public static final int DOULUO = 1010;
+
     /**
      * 输入口令红包
      */

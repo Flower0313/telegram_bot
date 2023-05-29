@@ -271,7 +271,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         "\t探花秀才：【15元/95枚】\n" +
                         "\t淫王：【25元/160枚】");
             } else if (data.contains(Constant.BUY)) {
-                buyPhoenix(chatId, userId, data.split(Constant.SEPARATOR));
+                buyPhoenix(chatId, userId, data.split(Constant.SEPARATOR), new BigDecimal("7"));
             } else if (data.contains(Constant.DELAY_METHOD)) {
                 executeAsync(SendPhoto.builder().chatId(chatId)
                         .photo(new InputFile(new File(fileDir + "delay.jpg")))
@@ -293,7 +293,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             } else if (data.contains(Constant.SALE)) {
                 execute(SendMessage.builder().chatId(chatId).text("t.me/welcometophoenix").build());
             } else if (data.contains(Constant.IDENTITY)) {
-                this.sendTextRecall(chatId, "此功能开发中", 3);
+                UserVO userVO = botMapper.selectUser(userId);
+                this.chooseIdentity(chatId, userId, userVO.getType());
+            } else if (data.contains(String.valueOf(Constant.DOUKING))) {
+                this.bugIdentity(chatId, userId, new BigDecimal("150"), 1);
+            } else if (data.contains(String.valueOf(Constant.DOULUO))) {
+                this.bugIdentity(chatId, userId, new BigDecimal("495"), 2);
             } else {
                 //分页
                 showPhoenixList(chatId, 0, Constant.ONE, 1, Constant.VOID);
@@ -393,10 +398,10 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      * @param userId 用户id
      * @param ids    获取redis的value
      */
-    private void buyPhoenix(Long chatId, Long userId, String[] ids) throws TelegramApiException {
+    private void buyPhoenix(Long chatId, Long userId, String[] ids, BigDecimal value) throws TelegramApiException {
         UserVO userVO = botMapper.selectUser(userId);
         if (Objects.nonNull(userVO)) {
-            BigDecimal subtract = userVO.getBalance().subtract(new BigDecimal("7"));
+            BigDecimal subtract = userVO.getBalance().subtract(value);
             if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
                 String phoenixId = ids[1].trim();
                 //更改用户余额
@@ -409,6 +414,46 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         } else {
             this.sendText(chatId, "请先点击 /register 成为凤皇帮用户!");
         }
+    }
+
+    /**
+     * 购买身份
+     *
+     * @param chatId 频道id
+     * @param userId 用户id
+     * @param value  价值
+     */
+    private void bugIdentity(Long chatId, Long userId, BigDecimal value, int type) throws TelegramApiException {
+        UserVO userVO = botMapper.selectUserOri(userId);
+        if (Objects.nonNull(userVO)) {
+            if (Integer.parseInt(userVO.getType()) < type) {
+                BigDecimal subtract = userVO.getBalance().subtract(value);
+                if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
+                    //更改用户余额 & 切换身份
+                    CompletableFuture.runAsync(() -> {
+                        botMapper.updateIdentity(userId, subtract, type);
+                    });
+                    this.sendText(chatId, "升级成功！");
+                } else {
+                    this.sendText(chatId, "CJ币不足，请点击充值按钮！");
+                }
+            } else {
+                this.sendText(chatId, "你已经比这个等级高了！");
+            }
+
+        } else {
+            this.sendText(chatId, "请先点击 /register 成为凤皇帮用户!");
+        }
+    }
+
+    private void chooseIdentity(Long chatId, Long userId, String type) throws TelegramApiException {
+        executeAsync(SendMessage.builder()
+                .chatId(chatId)
+                .text("请选择您需要升级的身份:")
+                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.DOU, null, "", "", Collections.emptyList())).build())
+                .build()
+        );
+
     }
 
 
@@ -516,6 +561,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 row7.add(InlineKeyboardButton.builder().text("红包若已发送,点击确认").callbackData(String.valueOf(Constant.RED_BAG)).build());
                 rows.add(row7);
                 return rows;
+            case Constant.DOU:
+                List<InlineKeyboardButton> row8 = new ArrayList<>();
+                row8.add(InlineKeyboardButton.builder().text("斗王【150】枚").callbackData(String.valueOf(Constant.DOUKING)).build());
+                row8.add(InlineKeyboardButton.builder().text("凤号斗罗【495】枚").callbackData(String.valueOf(Constant.DOULUO)).build());
+                rows.add(row8);
+                return rows;
             default:
                 return rows;
         }
@@ -549,11 +600,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             // 提交事务
             transactionManager.commit(status);
         } catch (Exception e) {
-            log.error("事务报错：" + e);
+            log.error("修改余额：" + e);
             // 回滚事务
             transactionManager.rollback(status);
         }
     }
+
 
     @Override
     public UserVO checkUser() {

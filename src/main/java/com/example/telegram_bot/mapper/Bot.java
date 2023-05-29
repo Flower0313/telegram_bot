@@ -44,6 +44,8 @@ public interface Bot {
      */
     UserVO selectUser(@Param("userId") Long userId);
 
+    UserVO selectUserOri(@Param("userId") Long userId);
+
     /**
      * 兑换后返回凤的真实联系方式
      *
@@ -59,6 +61,13 @@ public interface Bot {
      * @param balance 用户余额
      */
     void updateBalance(@Param("userId") Long userId, @Param("balance") BigDecimal balance);
+
+    /**
+     * @param userId  用户id
+     * @param balance 余额
+     * @param type    类型
+     */
+    void updateIdentity(@Param("userId") Long userId, @Param("balance") BigDecimal balance, @Param("type") Integer type);
 
     /**
      * 增加用户和凤的活动

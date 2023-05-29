@@ -100,6 +100,15 @@
         where user_id = #{userId}
     </select>
 
+    <select id="selectUserOri" resultMap="UserResultMap">
+        select id,
+               user_id,
+               balance,
+               `type`
+        from user_info
+        where user_id = #{userId}
+    </select>
+
     <select id="realContent" resultType="java.lang.String">
         SELECT real_content
         FROM `dwd_building_phoenix`
@@ -109,6 +118,13 @@
     <update id="updateBalance">
         update user_info
         set balance=#{balance}
+        where user_id = #{userId}
+    </update>
+
+    <update id="updateIdentity">
+        update user_info
+        set balance=#{balance},
+            type=#{type}
         where user_id = #{userId}
     </update>
 
