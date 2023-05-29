@@ -9,10 +9,13 @@ import com.example.telegram_bot.redis.RedisDao;
 import com.example.telegram_bot.service.BotService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.sun.xml.internal.messaging.saaj.packaging.mime.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -35,6 +38,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
+import javax.mail.internet.MimeMessage;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -70,6 +74,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     @Value("${file.dir}")
     private String fileDir;
 
+    @Autowired
+    private JavaMailSender javaMailSender;
 
     public BotServiceImpl() {
         super(new HoldenOptions(), Constant.TEST_TOKEN);
@@ -122,7 +128,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     if (messageText.contains(Constant.CJ)) {
                         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
                         // 创建一个 InlineKeyboardMarkup 对象，并设置键盘的按钮
-                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.PHOENIX_MENU, null, "", ""));
+                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.PHOENIX_MENU, null, "", "", Collections.emptyList()));
                         // 创建一个 SendMessage 对象，并将 InlineKeyboardMarkup 对象作为参数传递给 setReplyMarkup() 方法
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
@@ -132,7 +138,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                                 .build());
                     } else if (messageText.contains(Constant.HELP)) {
                         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.USER_MENU, null, "", ""));
+                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.USER_MENU, null, "", "", Collections.emptyList()));
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
                                 .text("帮助列表:")
@@ -242,7 +248,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             if (data.contains(Constant.LIST)) {
                 showSinglePhoenix(chatId, userId, data.split(Constant.SEPARATOR)[1].trim());
             } else if (data.contains(Constant.PAGE)) {
-                showPhoenixList(chatId, messageId, Integer.parseInt(data.split(Constant.SEPARATOR)[1].trim()), 2, Constant.VOID);
+                String[] split = data.split(Constant.SEPARATOR);
+                showPhoenixList(chatId, messageId, Integer.parseInt(split[1].trim()), 2, split[2].trim());
             } else if (data.contains(Constant.BALANCE)) {
                 UserVO userVO = botMapper.selectUser(userId);
                 if (Objects.isNull(userVO)) {
@@ -273,7 +280,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                                 "你需要输入的红包口令为：cj" + userId + "\n" +
                                 "你需要输入的红包口令为：cj" + userId + "\n" +
                                 "【此口令务必不要告诉任何人】")
-                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "")).build())
+                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "", Collections.emptyList())).build())
                         .build());
             } else if (data.contains(Constant.TIMELY_METHOD)) {
                 this.sendTextRecall(chatId, "此功能还在开发中，旨在追求买家的便利性！", 3);
@@ -282,6 +289,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 botMapper.addRedBag(userId);
                 this.typeAction(chatId);
                 this.sendTextRecall(chatId, "您已进入24小时验证通道，24小时内未成功原路退回", 5);
+                this.sendMail(String.valueOf(userId));
             } else if (data.contains(Constant.SALE)) {
                 execute(SendMessage.builder().chatId(chatId).text("t.me/welcometophoenix").build());
             } else if (data.contains(Constant.IDENTITY)) {
@@ -293,6 +301,21 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 发送邮件
+     */
+    private void sendMail(String text) throws Exception {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        //用来设置mimemessage中的内容
+        MimeMessageHelper helper = new MimeMessageHelper(message);
+        helper.setFrom("holdenxiao@163.com");
+        String[] emails = new String[]{"123103003@qq.com", "flower_0313@163.com", "new23231515@163.com"};
+        helper.setTo(emails);
+        helper.setSubject("【凤皇】支付宝红包口令");
+        helper.setText(text + "已经发布了一个红包口令，请立即领取！", true);
+        javaMailSender.send(helper.getMimeMessage());
     }
 
 
@@ -319,7 +342,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     .photo(new InputFile(processImage(targetPhoenix)))
                     .caption(targetPhoenix.getRemark())
                     .replyMarkup(InlineKeyboardMarkup.builder()
-                            .keyboard(getInnerMenu(Constant.SINGLE_PHOENIX, null, id, uuid)).build())
+                            .keyboard(getInnerMenu(Constant.SINGLE_PHOENIX, null, id, uuid, Collections.emptyList())).build())
                     .build();
             Message execute = execute(photo);
             //将UUID存入redis，方便后续能取到其值
@@ -332,7 +355,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             //已解锁，直接展示真实内容
             executeAsync(SendPhoto.builder().chatId(chatId)
                     .photo(new InputFile(processImage(targetPhoenix)))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "")).build())
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "", Collections.emptyList())).build())
                     .caption(targetPhoenix.getRealContent()).build()
             );
         }
@@ -403,7 +426,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         "（2）积分实时到账：\n" +
                         "● 实时到账，可以到帐后立马解锁；\n" +
                         "点击下面按钮，查看具体的付款方式及其步骤：")
-                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PAY_METHOD, null, "", "")).build())
+                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PAY_METHOD, null, "", "", Collections.emptyList())).build())
                 .build()
         );
     }
@@ -413,7 +436,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      *
      * @return 内嵌菜单
      */
-    private <T> List<List<InlineKeyboardButton>> getInnerMenu(int type, PageInfo<T> pageInfo, String id, String redisId) {
+    private <T> List<List<InlineKeyboardButton>> getInnerMenu(int type, PageInfo<T> pageInfo, String id, String redisId, List<String> list) {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         switch (type) {
             case Constant.PHOENIX_MENU: {
@@ -440,10 +463,10 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 rows.add(row31);
                 return rows;
             case Constant.PHOENIX_LIST:
-                List<T> list = pageInfo.getList();
+                List<T> lists = pageInfo.getList();
                 List<InlineKeyboardButton> row = new ArrayList<>();
                 // 将每个InlineKeyboardButton对象添加到row中
-                for (T t : list) {
+                for (T t : lists) {
                     Phoenix phoenix = (Phoenix) t;
                     // 将每个菜单转换为一个InlineKeyboardButton对象
                     row.add(InlineKeyboardButton.builder().text(String.valueOf(phoenix.getId())).callbackData("list-" + phoenix.getId()).build());
@@ -460,12 +483,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
 
                 List<InlineKeyboardButton> page = new ArrayList<>();
                 if (pageInfo.isHasPreviousPage()) {
-                    page.add(InlineKeyboardButton.builder().text("首页").callbackData("page-" + Constant.ONE).build());
-                    page.add(InlineKeyboardButton.builder().text("<<上一页").callbackData("page-" + pageInfo.getPrePage()).build());
+                    page.add(InlineKeyboardButton.builder().text("首页").callbackData("page-" + Constant.ONE + "-" + String.join("+", list)).build());
+                    page.add(InlineKeyboardButton.builder().text("<<上一页").callbackData("page-" + pageInfo.getPrePage() + "-" + String.join("+", list)).build());
                 }
                 if (pageInfo.isHasNextPage()) {
-                    page.add(InlineKeyboardButton.builder().text("下一页>>").callbackData("page-" + pageInfo.getNextPage()).build());
-                    page.add(InlineKeyboardButton.builder().text("尾页").callbackData("page-" + pageInfo.getPages()).build());
+                    page.add(InlineKeyboardButton.builder().text("下一页>>").callbackData("page-" + pageInfo.getNextPage() + "-" + String.join("+", list)).build());
+                    page.add(InlineKeyboardButton.builder().text("尾页").callbackData("page-" + pageInfo.getPages() + "-" + String.join("+", list)).build());
                 }
                 rows.add(page);
                 return rows;
@@ -521,7 +544,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     .chatId(chatId)
                     .messageId((Integer) redisDao.get(ids[2].trim()))
                     .caption(botMapper.realContent(phoenixId))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "")).build())
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "", Collections.emptyList())).build())
                     .build());
             // 提交事务
             transactionManager.commit(status);
@@ -597,18 +620,19 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 .collect(Collectors.toList());
         PageInfo<Phoenix> phoenixes = PageHelper.startPage(pageStart, Constant.PAGE_SIZE)
                 .doSelectPageInfo(() -> botMapper.listPhoenix(list));
+
         if (type == 1) {
             execute(SendMessage.builder()
                     .chatId(chatId)
                     .text(pinList(phoenixes.getList()))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "", list)).build())
                     .build());
         } else {
             execute(EditMessageText.builder()
                     .chatId(chatId)
                     .messageId(messageId)
                     .text(pinList(phoenixes.getList()))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "")).build())
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PHOENIX_LIST, phoenixes, "", "", list)).build())
                     .build());
         }
 
