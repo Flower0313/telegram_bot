@@ -296,7 +296,11 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 UserVO userVO = botMapper.selectUser(userId);
                 this.chooseIdentity(chatId, userId, userVO.getType());
             } else if (data.contains(String.valueOf(Constant.DOUKING))) {
-                this.bugIdentity(chatId, userId, new BigDecimal("150"), 1);
+                executeAsync(SendPhoto.builder().chatId(chatId)
+                        .photo(new InputFile(new File(fileDir + "delay.jpg")))
+                        .caption("选择您需要激活的城市：")
+                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "", Collections.emptyList())).build())
+                        .build());
             } else if (data.contains(String.valueOf(Constant.DOULUO))) {
                 this.bugIdentity(chatId, userId, new BigDecimal("495"), 2);
             } else {
