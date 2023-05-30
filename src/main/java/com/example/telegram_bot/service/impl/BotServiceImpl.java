@@ -1,15 +1,11 @@
 package com.example.telegram_bot.service.impl;
 
 import com.example.telegram_bot.mapper.Bot;
-import com.example.telegram_bot.pojo.Constant;
-import com.example.telegram_bot.pojo.HoldenOptions;
-import com.example.telegram_bot.pojo.Phoenix;
-import com.example.telegram_bot.pojo.UserVO;
+import com.example.telegram_bot.pojo.*;
 import com.example.telegram_bot.redis.RedisDao;
 import com.example.telegram_bot.service.BotService;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import com.sun.xml.internal.messaging.saaj.packaging.mime.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +17,6 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
-import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
@@ -132,7 +127,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         // 创建一个 SendMessage 对象，并将 InlineKeyboardMarkup 对象作为参数传递给 setReplyMarkup() 方法
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
-                                .text("请选择以下感兴趣地区(数据每天00:00开始更新最新数据):\n由于是个人运营，所以服务器费用也是自己出，象征性收点小钱;" +
+                                .text("请选择以下感兴趣地区(数据每天00:00开始更新最新数据):\n由于是个人运营，所以2台服务器费用也是自己出，象征性收点小钱;" +
                                         "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了(每个1元左右)，而且数据量还很全。")
                                 .replyMarkup(keyboardMarkup)
                                 .build());
@@ -150,10 +145,10 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                             botMapper.addUser(message.getFrom().getId());
                             sendTextRecall(chatId, "恭喜注册成功！送你20枚【CJ币】", 4);
                         } else {
-                            sendTextRecall(chatId, "你已经是本凤皇帮会员,请洗澡去~", 3);
+                            sendTextRecall(chatId, "你已经是本凤皇帮会员，请洗澡选妃去~", 3);
                         }
                     } else if (messageText.contains(Constant.SIFT)) {
-                        this.forceReply(chatId, "请输入关键字，比如：上海+长宁区+包夜", Constant.SIFT);
+                        this.forceReply(chatId, "输入关键字，比如:静安+包夜", Constant.SIFT);
                     } else {
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
@@ -249,24 +244,26 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 showSinglePhoenix(chatId, userId, data.split(Constant.SEPARATOR)[1].trim());
             } else if (data.contains(Constant.PAGE)) {
                 String[] split = data.split(Constant.SEPARATOR);
-                showPhoenixList(chatId, messageId, Integer.parseInt(split[1].trim()), 2, split[2].trim());
+                showPhoenixList(chatId, messageId, Integer.parseInt(split[1].trim()), 2, split.length == 3 ? split[2].trim() : Constant.VOID);
             } else if (data.contains(Constant.BALANCE)) {
                 UserVO userVO = botMapper.selectUser(userId);
                 if (Objects.isNull(userVO)) {
                     this.sendText(chatId, "您的身份为：未注册\n您的CJ币余额为：0\n请输入 /register 进行注册");
                 } else {
-                    this.sendText(chatId, "您的身份为：" + userVO.getType() + "\n您的CJ币余额为：" + userVO.getBalance());
+                    List<String> strings = botMapper.checkUserCity(userId);
+                    this.sendText(chatId, "您的身份为：" + userVO.getType() + "\n您的CJ币余额为：" + userVO.getBalance() + "\n您凤斗王身份解锁的城市有：" + strings);
                 }
             } else if (data.contains(Constant.PAY)) {
                 chooseMethod(chatId, userId);
             } else if (data.contains(Constant.BOOK)) {
-                this.sendText(chatId, "（1）注册只能输入 /register 来执行，用户分为三种：\n" +
+                this.sendText(chatId, "【1】注册只能输入 /register 来执行，用户分为三种：\n" +
                         "\t第一种：凤斗者【免费】，只能使用CJ币来解锁所有楼凤；\n" +
-                        "\t第二种：凤斗王【30元】，解锁任一地区的楼凤；比如你在上海，你能免CJ币查询上海所有楼凤，而其他地区需要使用CJ币购买；\n" +
-                        "\t第三种：凤号斗罗【99元】，解锁全国楼凤；\n" +
-                        "（2）凡是新注册用户，初始CJ币都会奖励10枚；\n" +
-                        "（3）目前定价是【7枚/凤】，购买定价为【1元/5枚】，后期会根据楼凤的质量来区分不同的定价，但能保证不贵；且一次兑换永久有效，比如你解锁了一个楼凤，此后这个楼凤对你永久免费展示；\n" +
-                        "（4）套餐分为以下三种：\n" +
+                        "\t第二种：凤斗王【145枚】，解锁任一地区的楼凤；比如你在上海，你能免CJ币查询上海所有楼凤，而其他地区需要使用CJ币购买；\n" +
+                        "\t第三种：凤号斗罗【495枚】，解锁全国楼凤，永久有效；\n" +
+                        "【2】凡是新注册用户，初始CJ币都会奖励20枚；\n" +
+                        "【3】目前定价是【7枚/凤】，购买定价为【1元/5枚】，且一次兑换永久有效，比如你解锁了一个楼凤，此后这个楼凤对你永久免费展示；\n" +
+                        "【4】套餐分为以下三种：\n" +
+                        "\t参加科举：【1元/5枚】\n" +
                         "\t探花郎：【6元/35枚】\n" +
                         "\t探花秀才：【15元/95枚】\n" +
                         "\t淫王：【25元/160枚】");
@@ -296,13 +293,15 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 UserVO userVO = botMapper.selectUser(userId);
                 this.chooseIdentity(chatId, userId, userVO.getType());
             } else if (data.contains(String.valueOf(Constant.DOUKING))) {
-                executeAsync(SendPhoto.builder().chatId(chatId)
-                        .photo(new InputFile(new File(fileDir + "delay.jpg")))
-                        .caption("选择您需要激活的城市：")
-                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.RED_BAG, null, "", "", Collections.emptyList())).build())
+                executeAsync(SendMessage.builder().chatId(chatId)
+                        .text("选择您需要激活的城市：")
+                        .replyMarkup(InlineKeyboardMarkup.builder().keyboard(
+                                getInnerMenu(Constant.DOUKING, null, "", "", Collections.emptyList())).build())
                         .build());
             } else if (data.contains(String.valueOf(Constant.DOULUO))) {
-                this.bugIdentity(chatId, userId, new BigDecimal("495"), 2);
+                this.bugIdentity(chatId, userId, new BigDecimal("495"), 2, -1);
+            } else if (data.contains("city-")) {
+                this.bugIdentity(chatId, userId, new BigDecimal("145"), 1, Integer.valueOf(data.split("-")[1].trim()));
             } else {
                 //分页
                 showPhoenixList(chatId, 0, Constant.ONE, 1, Constant.VOID);
@@ -337,13 +336,23 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      */
     private void showSinglePhoenix(Long chatId, Long userId, String id) throws TelegramApiException {
         Phoenix targetPhoenix = botMapper.getTargetPhoenix(id);
-        //this.typeAction(chatId);
         Message preText = execute(SendMessage.builder()
                 .chatId(chatId)
                 .text(id + "号凤女准备中，请先去洗澡...")
                 .build());
         Integer ifLocked = botMapper.userPhoenixAction(userId, id);
-        if (Objects.isNull(ifLocked) || ifLocked == 0) {
+        UserVO userVO = botMapper.selectUser(userId);
+        List<Integer> userCityInfo = botMapper.userCityInfo(userId);
+        if (Objects.nonNull(userVO) && ("2").equals(userVO.getType())
+                || (Objects.nonNull(ifLocked) && ifLocked == Constant.UNLOCKED)
+                || (userCityInfo.size() != 0 && userCityInfo.contains(targetPhoenix.getCityId()))) {
+            //已解锁，直接展示真实内容
+            executeAsync(SendPhoto.builder().chatId(chatId)
+                    .photo(new InputFile(processImage(targetPhoenix)))
+                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "", Collections.emptyList())).build())
+                    .caption(targetPhoenix.getRealContent()).build()
+            );
+        } else {
             //生成UUID，用于后期更改词条消息的隐藏内容
             String uuid = UUID.randomUUID().toString().replaceAll(Constant.SEPARATOR, Constant.VOID);
             // 图片处理
@@ -360,13 +369,6 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             CompletableFuture.runAsync(() -> {
                 botMapper.linkBuyAction(userId, id, 0);
             });
-        } else {
-            //已解锁，直接展示真实内容
-            executeAsync(SendPhoto.builder().chatId(chatId)
-                    .photo(new InputFile(processImage(targetPhoenix)))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "", Collections.emptyList())).build())
-                    .caption(targetPhoenix.getRealContent()).build()
-            );
         }
         //撤回提示消息
         executeAsync(new DeleteMessage(String.valueOf(chatId), preText.getMessageId()));
@@ -427,24 +429,31 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      * @param userId 用户id
      * @param value  价值
      */
-    private void bugIdentity(Long chatId, Long userId, BigDecimal value, int type) throws TelegramApiException {
+    private void bugIdentity(Long chatId, Long userId, BigDecimal value, int type, Integer city) throws TelegramApiException {
         UserVO userVO = botMapper.selectUserOri(userId);
+        List<Integer> userCityVOS = botMapper.userCityInfo(userId);
+
         if (Objects.nonNull(userVO)) {
-            if (Integer.parseInt(userVO.getType()) < type) {
-                BigDecimal subtract = userVO.getBalance().subtract(value);
-                if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
+            BigDecimal subtract = userVO.getBalance().subtract(value);
+            if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
+                if (type == 1 && userCityVOS.contains(city)) {
+                    this.sendText(chatId, "此城市您已经激活过了，不需要再激活！");
+                    return;
+                } else if (type == 1 && !userCityVOS.contains(city)) {
                     //更改用户余额 & 切换身份
+                    CompletableFuture.runAsync(() -> {
+                        botMapper.insertUserCity(userId, city);
+                        botMapper.updateIdentity(userId, subtract, type);
+                    });
+                } else {
                     CompletableFuture.runAsync(() -> {
                         botMapper.updateIdentity(userId, subtract, type);
                     });
-                    this.sendText(chatId, "升级成功！");
-                } else {
-                    this.sendText(chatId, "CJ币不足，请点击充值按钮！");
                 }
+                this.sendText(chatId, "升级成功！");
             } else {
-                this.sendText(chatId, "你已经比这个等级高了！");
+                this.sendText(chatId, "CJ币不足，请点击充值按钮！");
             }
-
         } else {
             this.sendText(chatId, "请先点击 /register 成为凤皇帮用户!");
         }
@@ -567,9 +576,24 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 return rows;
             case Constant.DOU:
                 List<InlineKeyboardButton> row8 = new ArrayList<>();
-                row8.add(InlineKeyboardButton.builder().text("斗王【150】枚").callbackData(String.valueOf(Constant.DOUKING)).build());
+                row8.add(InlineKeyboardButton.builder().text("斗王【145】枚").callbackData(String.valueOf(Constant.DOUKING)).build());
                 row8.add(InlineKeyboardButton.builder().text("凤号斗罗【495】枚").callbackData(String.valueOf(Constant.DOULUO)).build());
                 rows.add(row8);
+                return rows;
+            case Constant.DOUKING:
+                List<CityVO> cityVOS = botMapper.listCity();
+                List<InlineKeyboardButton> row9 = new ArrayList<>();
+                // 将每个InlineKeyboardButton对象添加到row中
+                for (CityVO t : cityVOS) {
+                    // 将每个菜单转换为一个InlineKeyboardButton对象
+                    row9.add(InlineKeyboardButton.builder().text(String.valueOf(t.getCityName())).callbackData("city-" + t.getCityId()).build());
+                    //一行菜单最多8列
+                    if (row9.size() == 8) {
+                        // 将row添加到rows中，并重新创建一个新的row
+                        rows.add(row9);
+                        row9 = new ArrayList<>();
+                    }
+                }
                 return rows;
             default:
                 return rows;
@@ -626,11 +650,15 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         StringBuilder replyText = new StringBuilder();
         for (Phoenix phoenix : phoenixes) {
             String remark = phoenix.getRemark();
-            replyText.append(phoenix.getId()).append(">>")
-                    .append(remark.substring(0, Math.min(remark.length(), 30))).append("\n")
+            replyText.append("【").append(phoenix.getId()).append("】")
+                    .append(remark.replaceAll("\n", ""), 0, Math.min(remark.length(), 30)).append("\n")
                     .append("最低消费:").append(phoenix.getMinPrice()).append("\n-------------------------------------\n");
         }
-        replyText.append("点击具体序号查看详情（含图片）↓");
+        if (phoenixes.size() != 0) {
+            replyText.append("点击具体序号查看详情（含图片）↓");
+        } else {
+            replyText.append("查询数据为空,请尝试别的查询条件！");
+        }
         return replyText.toString();
     }
 

@@ -9,6 +9,7 @@
         <result column="age" property="age" jdbcType="INTEGER"/>
         <result column="province" property="province" jdbcType="VARCHAR"/>
         <result column="city" property="city" jdbcType="VARCHAR"/>
+        <result column="city_id" property="cityId" jdbcType="INTEGER"/>
         <result column="area" property="area" jdbcType="VARCHAR"/>
         <result column="if_sw" property="ifSw" jdbcType="BOOLEAN"/>
         <result column="if_by" property="ifBy" jdbcType="BOOLEAN"/>
@@ -24,6 +25,7 @@
         <id column="user_id" property="userId" jdbcType="BIGINT"/>
         <result column="balance" property="balance" jdbcType="DECIMAL"/>
         <result column="type" property="type" jdbcType="VARCHAR"/>
+        <result column="city_id" property="cityId" jdbcType="INTEGER"/>
     </resultMap>
 
     <select id="listPhoenix" resultMap="BaseResultMap">
@@ -61,6 +63,7 @@
                group_id,
                age,
                province,
+               city_id,
                city,
                area,
                IF
@@ -128,6 +131,11 @@
         where user_id = #{userId}
     </update>
 
+    <insert id="insertUserCity">
+        insert into user_city_info(user_Id, city_id)
+        values (#{userId}, #{cityId})
+    </insert>
+
     <insert id="linkBuyAction">
         INSERT INTO user_action (user_id, phoenix_id)
         VALUES (#{userId}, #{phoenixId}) ON DUPLICATE KEY
@@ -146,4 +154,29 @@
         values (#{userId});
     </insert>
 
+    <select id="listCity" resultType="com.example.telegram_bot.pojo.CityVO">
+        select city_id as cityId, city_name as cityName
+        from city_info
+    </select>
+
+    <select id="userCityInfo" resultType="java.lang.Integer">
+        select city_id
+        from user_city_info
+        where user_id = #{userId}
+    </select>
+
+    <select id="checkUserPhoenix" resultMap="UserResultMap">
+        SELECT a.user_id, a.type, b.city_id
+        FROM `user_info` a
+                 left join user_city_info b on a.user_id = b.user_id
+        where a.user_id = #{userId}
+    </select>
+
+    <select id="checkUserCity" resultType="java.lang.String">
+        SELECT b.city_name
+        FROM `user_city_info` a
+                 left join city_info b
+                           on a.city_id = b.city_id
+        where a.user_id = #{userId}
+    </select>
 </mapper>

@@ -149,6 +149,8 @@ public class Constant {
      */
     public static final int UNLOCKED = 1;
 
+    public static final int ZERO = 0;
+
     /**
      * 支付宝红包口令
      */

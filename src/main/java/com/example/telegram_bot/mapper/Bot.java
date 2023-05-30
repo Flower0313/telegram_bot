@@ -1,6 +1,8 @@
 package com.example.telegram_bot.mapper;
 
+import com.example.telegram_bot.pojo.CityVO;
 import com.example.telegram_bot.pojo.Phoenix;
+import com.example.telegram_bot.pojo.UserCityVO;
 import com.example.telegram_bot.pojo.UserVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -79,6 +81,14 @@ public interface Bot {
     void linkBuyAction(@Param("userId") Long userId, @Param("phoenixId") String phoenixId, @Param("locked") Integer locked);
 
     /**
+     * 增加斗王用户的城市关系
+     *
+     * @param userId 用户id
+     * @param cityId 城市id
+     */
+    void insertUserCity(@Param("userId") Long userId, @Param("cityId") Integer cityId);
+
+    /**
      * 判断该用户和凤是否处于解锁关系
      *
      * @param userId    用户id
@@ -93,4 +103,25 @@ public interface Bot {
      * @param userId 用户id
      */
     void addRedBag(@Param("userId") Long userId);
+
+    /**
+     * 显示城市
+     *
+     * @return 城市实体
+     */
+    List<CityVO> listCity();
+
+    /**
+     * @param userId 用户id
+     * @return 用户城市关系
+     */
+    List<Integer> userCityInfo(@Param("userId") Long userId);
+
+    List<UserVO> checkUserPhoenix(@Param("userId") Long userId);
+
+    /**
+     * @param userId 用户id
+     * @return 解锁城市
+     */
+    List<String> checkUserCity(@Param("userId") Long userId);
 }

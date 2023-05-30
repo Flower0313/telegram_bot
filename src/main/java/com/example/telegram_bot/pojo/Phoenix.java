@@ -42,6 +42,11 @@ public class Phoenix {
     private String city;
 
     /**
+     * 城市id
+     */
+    private Integer cityId;
+
+    /**
      * 区域
      */
     private String area;
