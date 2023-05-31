@@ -343,7 +343,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         Integer ifLocked = botMapper.userPhoenixAction(userId, id);
         UserVO userVO = botMapper.selectUser(userId);
         List<Integer> userCityInfo = botMapper.userCityInfo(userId);
-        if (Objects.nonNull(userVO) && ("2").equals(userVO.getType())
+        if (Objects.nonNull(userVO) && ("2").equals(userVO.getCode())
                 || (Objects.nonNull(ifLocked) && ifLocked == Constant.UNLOCKED)
                 || (userCityInfo.size() != 0 && userCityInfo.contains(targetPhoenix.getCityId()))) {
             //已解锁，直接展示真实内容
