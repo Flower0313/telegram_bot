@@ -251,7 +251,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     this.sendText(chatId, "您的身份为：未注册\n您的CJ币余额为：0\n请输入 /register 进行注册");
                 } else {
                     List<String> strings = botMapper.checkUserCity(userId);
-                    this.sendText(chatId, "您的身份为：" + userVO.getType() + "\n您的CJ币余额为：" + userVO.getBalance() + "\n您凤斗王身份解锁的城市有：" + strings);
+                    this.sendText(chatId, "你的用户编号：" + userId + "\n您的身份为：" + userVO.getType() + "\n您的CJ币余额为：" + userVO.getBalance() + "\n您凤斗王身份解锁的城市有：" + strings);
                 }
             } else if (data.contains(Constant.PAY)) {
                 chooseMethod(chatId, userId);
