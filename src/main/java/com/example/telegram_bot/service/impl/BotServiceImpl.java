@@ -341,9 +341,9 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 .text(id + "号凤女准备中，请先去洗澡...")
                 .build());
         Integer ifLocked = botMapper.userPhoenixAction(userId, id);
-        UserVO userVO = botMapper.selectUser(userId);
+        UserVO userVO = botMapper.selectUserOri(userId);
         List<Integer> userCityInfo = botMapper.userCityInfo(userId);
-        if (Objects.nonNull(userVO) && ("2").equals(userVO.getCode())
+        if (Objects.nonNull(userVO) && ("2").equals(userVO.getType())
                 || (Objects.nonNull(ifLocked) && ifLocked == Constant.UNLOCKED)
                 || (userCityInfo.size() != 0 && userCityInfo.contains(targetPhoenix.getCityId()))) {
             //已解锁，直接展示真实内容
