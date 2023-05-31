@@ -433,7 +433,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         UserVO userVO = botMapper.selectUserOri(userId);
         List<Integer> userCityVOS = botMapper.userCityInfo(userId);
         if (Objects.nonNull(userVO)) {
-            if (userVO.getCode() == 2) {
+            if ("2".equals(userVO.getType())) {
                 this.sendText(chatId, "您已经是最高权限，不需要再升级！");
             } else {
                 BigDecimal subtract = userVO.getBalance().subtract(value);
