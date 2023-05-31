@@ -432,28 +432,32 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     private void bugIdentity(Long chatId, Long userId, BigDecimal value, int type, Integer city) throws TelegramApiException {
         UserVO userVO = botMapper.selectUserOri(userId);
         List<Integer> userCityVOS = botMapper.userCityInfo(userId);
-
         if (Objects.nonNull(userVO)) {
-            BigDecimal subtract = userVO.getBalance().subtract(value);
-            if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
-                if (type == 1 && userCityVOS.contains(city)) {
-                    this.sendText(chatId, "此城市您已经激活过了，不需要再激活！");
-                    return;
-                } else if (type == 1 && !userCityVOS.contains(city)) {
-                    //更改用户余额 & 切换身份
-                    CompletableFuture.runAsync(() -> {
-                        botMapper.insertUserCity(userId, city);
-                        botMapper.updateIdentity(userId, subtract, type);
-                    });
-                } else {
-                    CompletableFuture.runAsync(() -> {
-                        botMapper.updateIdentity(userId, subtract, type);
-                    });
-                }
-                this.sendText(chatId, "升级成功！");
+            if (userVO.getCode() == 2) {
+                this.sendText(chatId, "您已经是最高权限，不需要再升级！");
             } else {
-                this.sendText(chatId, "CJ币不足，请点击充值按钮！");
+                BigDecimal subtract = userVO.getBalance().subtract(value);
+                if (subtract.compareTo(BigDecimal.ZERO) >= 0) {
+                    if (type == 1 && userCityVOS.contains(city)) {
+                        this.sendText(chatId, "此城市您已经激活过了，不需要再激活！");
+                        return;
+                    } else if (type == 1 && !userCityVOS.contains(city)) {
+                        //更改用户余额 & 切换身份
+                        CompletableFuture.runAsync(() -> {
+                            botMapper.insertUserCity(userId, city);
+                            botMapper.updateIdentity(userId, subtract, type);
+                        });
+                    } else {
+                        CompletableFuture.runAsync(() -> {
+                            botMapper.updateIdentity(userId, subtract, type);
+                        });
+                    }
+                    this.sendText(chatId, "升级成功！");
+                } else {
+                    this.sendText(chatId, "CJ币不足，请点击充值按钮！");
+                }
             }
+
         } else {
             this.sendText(chatId, "请先点击 /register 成为凤皇帮用户!");
         }

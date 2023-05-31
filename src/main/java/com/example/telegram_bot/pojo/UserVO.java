@@ -36,4 +36,9 @@ public class UserVO {
      * 城市
      */
     private Integer cityId;
+
+    /**
+     * 用户类型代码
+     */
+    private Integer code;
 }
