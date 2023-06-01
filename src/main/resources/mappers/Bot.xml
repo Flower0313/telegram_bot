@@ -26,7 +26,6 @@
         <result column="balance" property="balance" jdbcType="DECIMAL"/>
         <result column="type" property="type" jdbcType="VARCHAR"/>
         <result column="city_id" property="cityId" jdbcType="INTEGER"/>
-        <result column="code" property="code" jdbcType="INTEGER"/>
     </resultMap>
 
     <select id="listPhoenix" resultMap="BaseResultMap">
@@ -100,8 +99,6 @@
                    WHEN 2 THEN
                        '凤号斗罗'
                    END as type
-                ,
-               type    as `code`
         from user_info
         where user_id = #{userId}
     </select>

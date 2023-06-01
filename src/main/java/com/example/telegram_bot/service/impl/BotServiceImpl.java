@@ -732,16 +732,16 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     private File processImage(Phoenix phoenix) {
         try {
             File dir = new File(fileDir);
-            String fileName = phoenix.getChannelId() + "-" + phoenix.getMessageId() + "-" + phoenix.getGroupId() + ".png";
-            File afterFile = new File(fileDir + fileName);
+            String fileName = phoenix.getChannelId() + "-" + phoenix.getMessageId() + "-" + phoenix.getGroupId();
+            File afterFile = new File(fileDir + fileName + ".png");
             if (afterFile.exists()) {
                 return afterFile;
             } else {
                 File[] files = dir.listFiles(pathname -> {
                     // 判断文件是否是图片文件
-                    return pathname.isFile() && (
+                    return pathname.isFile() &&
                             pathname.getName().endsWith(".jpg")
-                    ) && pathname.getName().contains(phoenix.getGroupId());
+                            && pathname.getName().trim().contains(fileName.trim());
                 });
                 if (files != null) {
                     int desiredWidth = 230;
