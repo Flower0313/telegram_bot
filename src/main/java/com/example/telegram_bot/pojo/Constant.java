@@ -90,6 +90,11 @@ public class Constant {
     public static final String IDENTITY = "identity";
 
     /**
+     * 上传楼凤
+     */
+    public static final String UPLOAD = "upload";
+
+    /**
      * 分隔符
      */
     public static final String SEPARATOR = "-";

@@ -69,6 +69,12 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     @Value("${file.dir}")
     private String fileDir;
 
+    @Value("${pic.width}")
+    private int width;
+
+    @Value("${pic.height}")
+    private int height;
+
     @Autowired
     private JavaMailSender javaMailSender;
 
@@ -213,7 +219,6 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
      *
      * @param chatId 频道id
      * @param text   消息内容
-     * @throws TelegramApiException
      */
     private void sendTextRecall(Long chatId, String text, Integer duration) throws TelegramApiException {
         Message message = execute(SendMessage.builder()
@@ -289,6 +294,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 this.sendMail(String.valueOf(userId));
             } else if (data.contains(Constant.SALE)) {
                 execute(SendMessage.builder().chatId(chatId).text("t.me/welcometophoenix").build());
+            } else if (data.contains(Constant.UPLOAD)) {
+                this.sendTextRecall(chatId, "功能开发中，上传得【20】枚CJ币", 3);
             } else if (data.contains(Constant.IDENTITY)) {
                 UserVO userVO = botMapper.selectUser(userId);
                 this.chooseIdentity(chatId, userId, userVO.getType());
@@ -521,6 +528,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 row3.add(InlineKeyboardButton.builder().text("售后反馈").callbackData(Constant.SALE).build());
                 List<InlineKeyboardButton> row31 = new ArrayList<>();
                 row31.add(InlineKeyboardButton.builder().text("兑换身份").callbackData(Constant.IDENTITY).build());
+                row31.add(InlineKeyboardButton.builder().text("上传楼凤").callbackData(Constant.UPLOAD).build());
                 rows.add(row3);
                 rows.add(row31);
                 return rows;
@@ -689,7 +697,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 this.sendText(chatId, "口令输入成功，验证中...");
                 break;
             case Constant.SIFT:
-                this.showPhoenixList(chatId, message.getMessageId(), Constant.ONE, 1, message.getText());
+                this.showPhoenixList(chatId, message.getMessageId(), Constant.ONE, Constant.ONE, message.getText());
                 break;
             default:
                 break;
@@ -733,7 +741,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         try {
             File dir = new File(fileDir);
             String fileName = phoenix.getChannelId() + "-" + phoenix.getMessageId() + "-" + phoenix.getGroupId();
-            File afterFile = new File(fileDir + fileName + ".png");
+            File afterFile = new File(fileDir + fileName.trim() + ".png");
             if (afterFile.exists()) {
                 return afterFile;
             } else {
@@ -744,8 +752,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                             && pathname.getName().trim().contains(fileName.trim());
                 });
                 if (files != null) {
-                    int desiredWidth = 230;
-                    int desiredHeight = 300;
+                    int desiredWidth = width;
+                    int desiredHeight = height;
 
                     List<BufferedImage> resizedImageList = new ArrayList<>();
                     IntStream.range(0, files.length).parallel().forEach(i -> {
@@ -785,7 +793,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     CompletableFuture.runAsync(() -> {
                         for (File file : files) {
                             if (!file.delete()) {
-                                log.info("文件删除失败");
+                                log.info("文件{}删除时出现错误", file);
                             }
                         }
                     });
@@ -795,6 +803,5 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         } catch (Exception e) {
             return new File(fileDir + "noimage.jpg");
         }
-        //到时候以一张没图片的图片代替
     }
 }
