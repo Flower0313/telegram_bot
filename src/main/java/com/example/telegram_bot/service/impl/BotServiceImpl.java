@@ -2,6 +2,7 @@ package com.example.telegram_bot.service.impl;
 
 import com.example.telegram_bot.mapper.Bot;
 import com.example.telegram_bot.pojo.*;
+import com.example.telegram_bot.pojo.Menu;
 import com.example.telegram_bot.redis.RedisDao;
 import com.example.telegram_bot.service.BotService;
 import com.github.pagehelper.PageHelper;
@@ -79,7 +80,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     private JavaMailSender javaMailSender;
 
     public BotServiceImpl() {
-        super(new HoldenOptions(), Constant.TEST_TOKEN);
+        //super(new HoldenOptions(), Constant.TEST_TOKEN);
+        super(Constant.TOKEN);
     }
 
     /**
@@ -127,23 +129,16 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     long chatId = message.getChatId();
                     String messageText = message.getText();
                     if (messageText.contains(Constant.CJ)) {
-                        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-                        // 创建一个 InlineKeyboardMarkup 对象，并设置键盘的按钮
-                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.PHOENIX_MENU, null, "", "", Collections.emptyList()));
-                        // 创建一个 SendMessage 对象，并将 InlineKeyboardMarkup 对象作为参数传递给 setReplyMarkup() 方法
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
-                                .text("请选择以下感兴趣地区(数据每天00:00开始更新最新数据):\n由于是个人运营，所以2台服务器费用也是自己出，象征性收点小钱;" +
-                                        "相比那些动辄单个30元的楼凤，我这边算是讨口饭吃了(每个1元左右)，而且数据量还很全。")
-                                .replyMarkup(keyboardMarkup)
+                                .text(botMapper.showText(10001))
+                                .replyMarkup(getInnerMenu(botMapper.listMenu(10001), Constant.EIGHT))
                                 .build());
                     } else if (messageText.contains(Constant.HELP)) {
-                        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(getInnerMenu(Constant.USER_MENU, null, "", "", Collections.emptyList()));
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
                                 .text("帮助列表:")
-                                .replyMarkup(keyboardMarkup)
+                                .replyMarkup(getInnerMenu(botMapper.listMenu(10002), Constant.FOUR))
                                 .build());
                     } else if (messageText.contains(Constant.REGISTER)) {
                         Long userId = message.getFrom().getId();
@@ -156,12 +151,17 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     } else if (messageText.contains(Constant.SIFT)) {
                         this.forceReply(chatId, "输入关键字，比如:静安+包夜", Constant.SIFT);
                     } else {
+                        //返回主页面列表
+                        StringBuilder menuList = new StringBuilder();
+                        for (Menu menu : botMapper.listMenu(0)) {
+                            menuList.append("输入 ").append("/").append(menu.getMenuValue()).append(" ").append(menu.getMenuAdd()).append("\n");
+                        }
                         executeAsync(SendMessage.builder()
                                 .chatId(chatId)
-                                .text("输入 /cj 开始选凤\n输入 /help 获取其他功能\n输入 /register 点击注册送【出击币】\n输入 /sift 进行老师筛选").build());
+                                .text(menuList.toString()).build());
                     }
                 } else {
-                    this.sendTextRecall(message.getChatId(), "请私聊我哦，有惊喜！", 2);
+                    this.sendTextRecall(message.getChatId(), "请私聊我哦，有惊喜！", 5);
                 }
             } else if (update.hasCallbackQuery()) {
                 onCallbackQueryReceived(update.getCallbackQuery());
@@ -236,10 +236,15 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         }, duration, TimeUnit.SECONDS);
     }
 
+    /**
+     * 处理内联键盘回调
+     *
+     * @param callbackQuery 用户操作实体
+     */
     public void onCallbackQueryReceived(CallbackQuery callbackQuery) {
         try {
-            // 处理内联键盘回调
             String data = callbackQuery.getData();
+            String choose = data.split(Constant.SEPARATOR)[0];
             long chatId = callbackQuery.getMessage().getChatId();
             Integer messageId = callbackQuery.getMessage().getMessageId();
             Long userId = callbackQuery.getFrom().getId();
@@ -272,7 +277,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         "\t探花郎：【6元/35枚】\n" +
                         "\t探花秀才：【15元/95枚】\n" +
                         "\t淫王：【25元/160枚】");
-            } else if (data.contains(Constant.BUY)) {
+            } else if (choose.equals(Constant.BUY)) {
                 buyPhoenix(chatId, userId, data.split(Constant.SEPARATOR), new BigDecimal("7"));
             } else if (data.contains(Constant.DELAY_METHOD)) {
                 executeAsync(SendPhoto.builder().chatId(chatId)
@@ -296,9 +301,13 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 execute(SendMessage.builder().chatId(chatId).text("t.me/welcometophoenix").build());
             } else if (data.contains(Constant.UPLOAD)) {
                 this.sendTextRecall(chatId, "功能开发中，上传得【20】枚CJ币", 3);
-            } else if (data.contains(Constant.IDENTITY)) {
+            } else if (data.contains(String.valueOf(Constant.IDENTITY))) {
                 UserVO userVO = botMapper.selectUser(userId);
-                this.chooseIdentity(chatId, userId, userVO.getType());
+                if (userVO != null) {
+                    this.chooseIdentity(chatId, userId, userVO.getType());
+                } else {
+                    this.sendText(chatId, "请 /register 先注册身份");
+                }
             } else if (data.contains(String.valueOf(Constant.DOUKING))) {
                 executeAsync(SendMessage.builder().chatId(chatId)
                         .text("选择您需要激活的城市：")
@@ -325,8 +334,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         MimeMessage message = javaMailSender.createMimeMessage();
         //用来设置mimemessage中的内容
         MimeMessageHelper helper = new MimeMessageHelper(message);
-        helper.setFrom("holdenxiao@163.com");
-        String[] emails = new String[]{"123103003@qq.com", "flower_0313@163.com", "new23231515@163.com"};
+        helper.setFrom("holdenxiao@gmail.com");
+        String[] emails = new String[]{"123103003@qq.com"};
         helper.setTo(emails);
         helper.setSubject("【凤皇】支付宝红包口令");
         helper.setText(text + "已经发布了一个红包口令，请立即领取！", true);
@@ -356,8 +365,8 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             //已解锁，直接展示真实内容
             executeAsync(SendPhoto.builder().chatId(chatId)
                     .photo(new InputFile(processImage(targetPhoenix)))
-                    .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.AFTER_BUY, null, "", "", Collections.emptyList())).build())
-                    .caption(targetPhoenix.getRealContent()).build()
+                    .replyMarkup(getInnerMenu(botMapper.listMenu(10017), Constant.FOUR))
+                    .caption("【" + targetPhoenix.getId() + "】" + targetPhoenix.getRealContent()).build()
             );
         } else {
             //生成UUID，用于后期更改词条消息的隐藏内容
@@ -365,18 +374,18 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             // 图片处理
             SendPhoto photo = SendPhoto.builder().chatId(chatId)
                     .photo(new InputFile(processImage(targetPhoenix)))
-                    .caption(targetPhoenix.getRemark())
+                    .caption("【" + targetPhoenix.getId() + "】" + targetPhoenix.getRemark())
                     .replyMarkup(InlineKeyboardMarkup.builder()
                             .keyboard(getInnerMenu(Constant.SINGLE_PHOENIX, null, id, uuid, Collections.emptyList())).build())
                     .build();
             Message execute = execute(photo);
             //将UUID存入redis，方便后续能取到其值
             redisDao.setHour(uuid, execute.getMessageId(), Constant.ONE);
-            //增加访问次数
-            CompletableFuture.runAsync(() -> {
-                botMapper.linkBuyAction(userId, id, 0);
-            });
         }
+        //增加访问次数
+        CompletableFuture.runAsync(() -> {
+            botMapper.linkBuyAction(userId, id, 0);
+        });
         //撤回提示消息
         executeAsync(new DeleteMessage(String.valueOf(chatId), preText.getMessageId()));
     }
@@ -474,7 +483,7 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
         executeAsync(SendMessage.builder()
                 .chatId(chatId)
                 .text("请选择您需要升级的身份:")
-                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.DOU, null, "", "", Collections.emptyList())).build())
+                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.IDENTITY, null, "", "", Collections.emptyList())).build())
                 .build()
         );
 
@@ -495,9 +504,32 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                         "（2）积分实时到账：\n" +
                         "● 实时到账，可以到帐后立马解锁；\n" +
                         "点击下面按钮，查看具体的付款方式及其步骤：")
-                .replyMarkup(InlineKeyboardMarkup.builder().keyboard(getInnerMenu(Constant.PAY_METHOD, null, "", "", Collections.emptyList())).build())
+                .replyMarkup(getInnerMenu(botMapper.listMenu(10006), Constant.FOUR))
                 .build()
         );
+    }
+
+
+    private InlineKeyboardMarkup getInnerMenu(List<Menu> menus, int column) {
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        // 将每个InlineKeyboardButton对象添加到row中
+        for (Menu t : menus) {
+            row.add(InlineKeyboardButton.builder().text(t.getMenuRemark()).callbackData(t.getMenuCode()).build());
+            //一行菜单最多4列
+            if (row.size() == column) {
+                // 将row添加到rows中，并重新创建一个新的row
+                rows.add(row);
+                row = new ArrayList<>();
+            }
+        }
+        if (!row.isEmpty()) {
+            rows.add(row);
+        }
+        keyboardMarkup.setKeyboard(rows);
+
+        return keyboardMarkup;
     }
 
     /**
@@ -508,30 +540,6 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
     private <T> List<List<InlineKeyboardButton>> getInnerMenu(int type, PageInfo<T> pageInfo, String id, String redisId, List<String> list) {
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         switch (type) {
-            case Constant.PHOENIX_MENU: {
-                List<InlineKeyboardButton> row1 = new ArrayList<>();
-                row1.add(InlineKeyboardButton.builder().text("上海").callbackData(Constant.SH).build());
-                //row1.add(InlineKeyboardButton.builder().text("深圳(开发中)").callbackData("sz").build());
-                //row1.add(InlineKeyboardButton.builder().text("北京(开发中)").callbackData("bj").build());
-                //List<InlineKeyboardButton> row2 = new ArrayList<>();
-                //row2.add(InlineKeyboardButton.builder().text("广州(开发中)").callbackData("gz").build());
-                //row2.add(InlineKeyboardButton.builder().text("长沙(开发中)").callbackData("cs").build());
-                rows.add(row1);
-                //rows.add(row2);
-                return rows;
-            }
-            case Constant.USER_MENU:
-                List<InlineKeyboardButton> row3 = new ArrayList<>();
-                row3.add(InlineKeyboardButton.builder().text("购买积分").callbackData(Constant.PAY).build());
-                row3.add(InlineKeyboardButton.builder().text("用户信息").callbackData(Constant.BALANCE).build());
-                row3.add(InlineKeyboardButton.builder().text("使用说明").callbackData(Constant.BOOK).build());
-                row3.add(InlineKeyboardButton.builder().text("售后反馈").callbackData(Constant.SALE).build());
-                List<InlineKeyboardButton> row31 = new ArrayList<>();
-                row31.add(InlineKeyboardButton.builder().text("兑换身份").callbackData(Constant.IDENTITY).build());
-                row31.add(InlineKeyboardButton.builder().text("上传楼凤").callbackData(Constant.UPLOAD).build());
-                rows.add(row3);
-                rows.add(row31);
-                return rows;
             case Constant.PHOENIX_LIST:
                 List<T> lists = pageInfo.getList();
                 List<InlineKeyboardButton> row = new ArrayList<>();
@@ -564,29 +572,17 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                 return rows;
             case Constant.SINGLE_PHOENIX:
                 List<InlineKeyboardButton> row4 = new ArrayList<>();
-                row4.add(InlineKeyboardButton.builder().text("【7】枚").callbackData("buy-" + id + "-" + redisId).build());
+                row4.add(InlineKeyboardButton.builder().text("【7】枚").callbackData("10009-" + id + "-" + redisId).build());
                 row4.add(InlineKeyboardButton.builder().text("充值").callbackData(Constant.PAY).build());
                 row4.add(InlineKeyboardButton.builder().text("余额查询").callbackData(Constant.BALANCE).build());
                 rows.add(row4);
-                return rows;
-            case Constant.AFTER_BUY:
-                List<InlineKeyboardButton> row5 = new ArrayList<>();
-                row5.add(InlineKeyboardButton.builder().text("充值").callbackData(Constant.PAY).build());
-                row5.add(InlineKeyboardButton.builder().text("余额查询").callbackData(Constant.BALANCE).build());
-                rows.add(row5);
-                return rows;
-            case Constant.PAY_METHOD:
-                List<InlineKeyboardButton> row6 = new ArrayList<>();
-                row6.add(InlineKeyboardButton.builder().text("延时到账").callbackData(Constant.DELAY_METHOD).build());
-                row6.add(InlineKeyboardButton.builder().text("实时到账").callbackData(Constant.TIMELY_METHOD).build());
-                rows.add(row6);
                 return rows;
             case Constant.RED_BAG:
                 List<InlineKeyboardButton> row7 = new ArrayList<>();
                 row7.add(InlineKeyboardButton.builder().text("红包若已发送,点击确认").callbackData(String.valueOf(Constant.RED_BAG)).build());
                 rows.add(row7);
                 return rows;
-            case Constant.DOU:
+            case Constant.IDENTITY:
                 List<InlineKeyboardButton> row8 = new ArrayList<>();
                 row8.add(InlineKeyboardButton.builder().text("斗王【145】枚").callbackData(String.valueOf(Constant.DOUKING)).build());
                 row8.add(InlineKeyboardButton.builder().text("凤号斗罗【495】枚").callbackData(String.valueOf(Constant.DOULUO)).build());
@@ -747,9 +743,9 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
             } else {
                 File[] files = dir.listFiles(pathname -> {
                     // 判断文件是否是图片文件
-                    return pathname.isFile() &&
-                            pathname.getName().endsWith(".jpg")
-                            && pathname.getName().trim().contains(fileName.trim());
+                    return pathname.getName().endsWith(".jpg")
+                            && pathname.getName().trim().contains(phoenix.getChannelId())
+                            && pathname.getName().trim().contains(("0").equals(phoenix.getGroupId().trim()) ? String.valueOf(phoenix.getMessageId()) : phoenix.getGroupId());
                 });
                 if (files != null) {
                     int desiredWidth = width;
@@ -777,7 +773,18 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                     BufferedImage mergedImage = new BufferedImage(desiredWidth * columns, desiredHeight * rows, BufferedImage.TYPE_INT_RGB);
 
                     Graphics2D g2dMerged = mergedImage.createGraphics();
-                    for (int i = 0; i < columns; i++) {
+                    int index = 0;
+                    for (int i = 0; i < rows; i++) {
+                        for (int j = 0; j < columns; j++) {
+                            if (index < resizedImageList.size()) {
+                                BufferedImage resizedImage = resizedImageList.get(index);
+                                g2dMerged.drawImage(resizedImage, j * desiredWidth, i * desiredHeight, null);
+                                resizedImage.flush();
+                            }
+                            index++;
+                        }
+                    }
+                    /*for (int i = 0; i < columns; i++) {
                         for (int j = 0; j < rows; j++) {
                             int index = i * rows + j;
                             if (index < resizedImageList.size()) {
@@ -786,14 +793,14 @@ public class BotServiceImpl extends TelegramLongPollingBot implements BotService
                                 resizedImage.flush();
                             }
                         }
-                    }
+                    }*/
                     g2dMerged.dispose();
                     ImageIO.write(mergedImage, "png", afterFile);
                     //异步删除图片
                     CompletableFuture.runAsync(() -> {
                         for (File file : files) {
                             if (!file.delete()) {
-                                log.info("文件{}删除时出现错误", file);
+                                log.info("文件 - {}删除时出现错误", file);
                             }
                         }
                     });

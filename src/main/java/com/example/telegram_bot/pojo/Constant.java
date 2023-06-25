@@ -51,43 +51,43 @@ public class Constant {
     /**
      * 使用说明
      */
-    public static final String BOOK = "book";
+    public static final String BOOK = "10005";
 
     /**
      * CJ币查询
      */
-    public static final String BALANCE = "balance";
+    public static final String BALANCE = "10020";
 
     /**
      * 购买积分
      */
-    public static final String PAY = "pay";
+    public static final String PAY = "10006";
 
     /**
      * 延时到账
      */
-    public static final String DELAY_METHOD = "delay";
+    public static final String DELAY_METHOD = "10007";
 
     /**
      * 即时到账
      */
-    public static final String TIMELY_METHOD = "timely";
+    public static final String TIMELY_METHOD = "10008";
 
 
     /**
      * 兑换
      */
-    public static final String BUY = "buy";
+    public static final String BUY = "10009";
 
     /**
      * 售后反馈
      */
-    public static final String SALE = "sale";
+    public static final String SALE = "10010";
 
     /**
      * 身份
      */
-    public static final String IDENTITY = "identity";
+    public static final int IDENTITY = 10011;
 
     /**
      * 上传楼凤
@@ -188,16 +188,26 @@ public class Constant {
     /**
      * 斗王
      */
-    public static final int DOUKING = 1009;
+    public static final int DOUKING = 10013;
 
     /**
      * 凤号斗罗
      */
-    public static final int DOULUO = 1010;
+    public static final int DOULUO = 10014;
 
     /**
      * 输入口令红包
      */
     public static final int RED_BAG = 1007;
+
+    /**
+     * 常量四
+     */
+    public static final int FOUR = 4;
+
+    /**
+     * 常量八
+     */
+    public static final int EIGHT = 8;
 
 }

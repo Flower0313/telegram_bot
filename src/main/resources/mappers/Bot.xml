@@ -28,6 +28,14 @@
         <result column="city_id" property="cityId" jdbcType="INTEGER"/>
     </resultMap>
 
+    <resultMap id="MenuResultMap" type="com.example.telegram_bot.pojo.Menu">
+        <id column="menu_code" property="menuCode" jdbcType="VARCHAR"/>
+        <id column="menu_parent" property="menuParent" jdbcType="INTEGER"/>
+        <result column="menu_value" property="menuValue" jdbcType="VARCHAR"/>
+        <result column="menu_add" property="menuAdd" jdbcType="VARCHAR"/>
+        <result column="menu_remark" property="menuRemark" jdbcType="VARCHAR"/>
+    </resultMap>
+
     <select id="listPhoenix" resultMap="BaseResultMap">
         SELECT id,
         channel_id,
@@ -178,5 +186,23 @@
                  left join city_info b
                            on a.city_id = b.city_id
         where a.user_id = #{userId}
+    </select>
+
+
+    <select id="listMenu" resultMap="MenuResultMap">
+        SELECT a.menu_code,
+               a.menu_parent,
+               b.menu_value,
+               a.menu_add,
+               b.menu_remark
+        FROM menu_operation a
+                 JOIN menu_phoenix b ON a.menu_code = b.menu_code
+            AND a.menu_parent = #{menuCode};
+    </select>
+
+    <select id="showText" resultType="java.lang.String">
+        select menu_text
+        from menu_phoenix
+        where menu_code = #{menuCode}
     </select>
 </mapper>

@@ -1,9 +1,6 @@
 package com.example.telegram_bot.mapper;
 
-import com.example.telegram_bot.pojo.CityVO;
-import com.example.telegram_bot.pojo.Phoenix;
-import com.example.telegram_bot.pojo.UserCityVO;
-import com.example.telegram_bot.pojo.UserVO;
+import com.example.telegram_bot.pojo.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -112,6 +109,8 @@ public interface Bot {
     List<CityVO> listCity();
 
     /**
+     * 用户有关的城市代码
+     *
      * @param userId 用户id
      * @return 用户城市关系
      */
@@ -120,8 +119,25 @@ public interface Bot {
     List<UserVO> checkUserPhoenix(@Param("userId") Long userId);
 
     /**
+     * 查看解锁城市
+     *
      * @param userId 用户id
      * @return 解锁城市
      */
     List<String> checkUserCity(@Param("userId") Long userId);
+
+    /**
+     * 选择菜单
+     *
+     * @param menuCode 菜单代码
+     * @return 菜单实体
+     */
+    List<Menu> listMenu(@Param("menuCode") Integer menuCode);
+
+    /**
+     * 展示菜单文本
+     *
+     * @param menuCode 菜单代码
+     */
+    String showText(@Param("menuCode") Integer menuCode);
 }
